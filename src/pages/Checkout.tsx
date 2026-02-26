@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/lib/products";
@@ -6,6 +6,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { ShippingAddress } from "@/types";
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
 
 export default function Checkout() {
   const { items, subtotal, clearCart } = useCart();
@@ -28,6 +34,15 @@ export default function Checkout() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Load Razorpay script
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    document.body.appendChild(script);
+    return () => { document.body.removeChild(script); };
+  }, []);
+
   const handleChange = (field: keyof ShippingAddress, value: string) => {
     setAddress((prev) => ({ ...prev, [field]: value }));
   };
@@ -44,7 +59,7 @@ export default function Checkout() {
     setLoading(true);
 
     try {
-      // Create order
+      // 1. Create order in DB
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
@@ -67,7 +82,7 @@ export default function Checkout() {
 
       if (orderError || !order) throw new Error(orderError?.message || "Failed to create order");
 
-      // Create order items
+      // 2. Create order items
       const orderItems = items.map((item) => ({
         order_id: order.id,
         product_id: item.product.id,
@@ -81,11 +96,72 @@ export default function Checkout() {
       const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
       if (itemsError) throw new Error(itemsError.message);
 
-      clearCart();
-      navigate("/order-confirmation");
+      // 3. Call create-razorpay-order edge function
+      const { data: rzData, error: rzError } = await supabase.functions.invoke(
+        "create-razorpay-order",
+        { body: { order_id: order.id, amount: total } }
+      );
+
+      if (rzError || !rzData?.razorpay_order_id) {
+        throw new Error(rzData?.error || rzError?.message || "Failed to create payment order");
+      }
+
+      // 4. Open Razorpay checkout
+      const options = {
+        key: rzData.razorpay_key_id,
+        amount: rzData.amount,
+        currency: rzData.currency,
+        name: "Earth Kind Apparel",
+        description: `Order #${order.id.slice(0, 8)}`,
+        order_id: rzData.razorpay_order_id,
+        prefill: {
+          name: address.full_name,
+          email,
+          contact: address.phone,
+        },
+        handler: async (response: any) => {
+          // Payment successful — update payment record
+          try {
+            await supabase
+              .from("payments")
+              .update({
+                gateway_payment_id: response.razorpay_payment_id,
+                status: "captured",
+              })
+              .eq("id", rzData.payment_id);
+
+            await supabase
+              .from("orders")
+              .update({ status: "paid", payment_id: response.razorpay_payment_id })
+              .eq("id", order.id);
+
+            clearCart();
+            navigate("/order-confirmation");
+          } catch (err) {
+            console.error("Post-payment update error:", err);
+            // Payment was captured by Razorpay, so still redirect
+            clearCart();
+            navigate("/order-confirmation");
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setLoading(false);
+            setError("Payment was cancelled. Your order is saved — you can retry.");
+          },
+        },
+        theme: { color: "#000000" },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", (response: any) => {
+        console.error("Payment failed:", response.error);
+        setLoading(false);
+        setError(`Payment failed: ${response.error.description}`);
+      });
+      rzp.open();
     } catch (err: any) {
       setError(err.message || "Something went wrong");
-    } finally {
       setLoading(false);
     }
   };
@@ -152,10 +228,10 @@ export default function Checkout() {
               disabled={loading || !user}
               className="w-full bg-primary text-primary-foreground py-4 text-sm font-medium uppercase tracking-widest hover:opacity-90 transition-opacity font-body disabled:opacity-50"
             >
-              {loading ? "Processing..." : `Place Order — ${formatPrice(total)}`}
+              {loading ? "Processing..." : `Pay Now — ${formatPrice(total)}`}
             </button>
             <p className="text-xs text-muted-foreground font-body text-center">
-              Payment gateway (Razorpay) will process payments once API keys are configured.
+              Secure payment powered by Razorpay. Supports UPI, cards, net banking & wallets.
             </p>
           </div>
 
