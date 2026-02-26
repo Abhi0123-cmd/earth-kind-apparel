@@ -26,7 +26,7 @@ export default function Auth() {
       if (error) {
         setError(error.message);
       } else {
-        setMessage("Check your email to confirm your account before signing in.");
+        navigate("/verify-email", { state: { email } });
       }
     } else {
       const { error } = await signIn(email, password);
