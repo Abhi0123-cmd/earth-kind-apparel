@@ -1,14 +1,21 @@
 import { Link } from "react-router-dom";
-import { ShoppingBag, Menu, X, User, LogOut } from "lucide-react";
+import { ShoppingBag, Menu, X, User, LogOut, Shield } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Navbar() {
   const { totalItems, openCart } = useCart();
   const { user, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    supabase.rpc("is_admin").then(({ data }) => setIsAdmin(!!data));
+  }, [user]);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
@@ -29,6 +36,11 @@ export default function Navbar() {
           <Link to="/policies" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors uppercase tracking-widest font-body">
             Policies
           </Link>
+          {isAdmin && (
+            <Link to="/admin" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors uppercase tracking-widest font-body flex items-center gap-1">
+              <Shield className="w-3.5 h-3.5" /> Admin
+            </Link>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -78,25 +90,18 @@ export default function Navbar() {
             className="md:hidden overflow-hidden bg-background border-b border-border"
           >
             <div className="flex flex-col gap-4 px-6 py-6">
-              <Link to="/shop" onClick={() => setMobileOpen(false)} className="text-lg font-display tracking-wider text-foreground">
-                SHOP
-              </Link>
+              <Link to="/shop" onClick={() => setMobileOpen(false)} className="text-lg font-display tracking-wider text-foreground">SHOP</Link>
               {user && (
-                <Link to="/orders" onClick={() => setMobileOpen(false)} className="text-lg font-display tracking-wider text-foreground">
-                  ORDERS
-                </Link>
+                <Link to="/orders" onClick={() => setMobileOpen(false)} className="text-lg font-display tracking-wider text-foreground">ORDERS</Link>
               )}
-              <Link to="/policies" onClick={() => setMobileOpen(false)} className="text-lg font-display tracking-wider text-foreground">
-                POLICIES
-              </Link>
+              <Link to="/policies" onClick={() => setMobileOpen(false)} className="text-lg font-display tracking-wider text-foreground">POLICIES</Link>
+              {isAdmin && (
+                <Link to="/admin" onClick={() => setMobileOpen(false)} className="text-lg font-display tracking-wider text-foreground">ADMIN</Link>
+              )}
               {user ? (
-                <button onClick={() => { signOut(); setMobileOpen(false); }} className="text-lg font-display tracking-wider text-muted-foreground text-left">
-                  SIGN OUT
-                </button>
+                <button onClick={() => { signOut(); setMobileOpen(false); }} className="text-lg font-display tracking-wider text-muted-foreground text-left">SIGN OUT</button>
               ) : (
-                <Link to="/auth" onClick={() => setMobileOpen(false)} className="text-lg font-display tracking-wider text-foreground">
-                  SIGN IN
-                </Link>
+                <Link to="/auth" onClick={() => setMobileOpen(false)} className="text-lg font-display tracking-wider text-foreground">SIGN IN</Link>
               )}
             </div>
           </motion.div>
