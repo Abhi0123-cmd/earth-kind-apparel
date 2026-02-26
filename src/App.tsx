@@ -19,6 +19,13 @@ import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Orders from "./pages/Orders";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminOrders from "./pages/admin/AdminOrders";
+import AdminInventory from "./pages/admin/AdminInventory";
+import AdminReturns from "./pages/admin/AdminReturns";
+import AdminRefunds from "./pages/admin/AdminRefunds";
+import AdminSupport from "./pages/admin/AdminSupport";
+import AdminIntegrations from "./pages/admin/AdminIntegrations";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +53,14 @@ const App = () => (
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/orders" element={<Orders />} />
+                {/* Admin Routes */}
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/orders" element={<AdminOrders />} />
+                <Route path="/admin/inventory" element={<AdminInventory />} />
+                <Route path="/admin/returns" element={<AdminReturns />} />
+                <Route path="/admin/refunds" element={<AdminRefunds />} />
+                <Route path="/admin/support" element={<AdminSupport />} />
+                <Route path="/admin/integrations" element={<AdminIntegrations />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>
