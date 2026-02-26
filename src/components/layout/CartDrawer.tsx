@@ -2,7 +2,7 @@ import { useCart } from "@/context/CartContext";
 import { X, Plus, Minus, ShoppingBag } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { formatPrice } from "@/data/mock-products";
+import { formatPrice } from "@/lib/products";
 
 export default function CartDrawer() {
   const { isOpen, closeCart, items, removeItem, updateQuantity, subtotal, totalItems } = useCart();
