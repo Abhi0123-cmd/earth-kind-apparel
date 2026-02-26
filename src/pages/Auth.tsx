@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function Auth() {
@@ -33,7 +34,21 @@ export default function Auth() {
       if (error) {
         setError(error.message);
       } else {
-        navigate("/");
+        const { data: userData } = await supabase.auth.getUser();
+        const userId = userData.user?.id;
+
+        let nextPath = "/";
+
+        if (userId) {
+          const { data: hasAdminRole } = await supabase.rpc("has_role", {
+            _user_id: userId,
+            _role: "admin",
+          });
+
+          if (hasAdminRole) nextPath = "/admin";
+        }
+
+        navigate(nextPath);
       }
     }
     setLoading(false);
