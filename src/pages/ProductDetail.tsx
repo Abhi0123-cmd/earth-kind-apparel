@@ -76,7 +76,7 @@ export default function ProductDetail() {
     setTimeout(() => setAdded(false), 2000);
   };
 
-  const maxQty = selectedVariant ? Math.min(selectedVariant.stock, 10) : 10;
+  const maxQty = selectedVariant ? selectedVariant.stock : 1;
 
   const productImages = product.images.length > 0 ? product.images : ["/placeholder.svg"];
 
