@@ -1,5 +1,6 @@
 import { useState, useEffect, createContext, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getPublicAppUrl } from "@/lib/auth-urls";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
@@ -13,17 +14,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const PREVIEW_APP_URL = "https://id-preview--46e8ffcf-3df4-49ad-a6bd-ebedc353c9ea.lovable.app";
-
-const getAuthBaseUrl = () => {
-  const configuredUrl = import.meta.env.VITE_PUBLIC_APP_URL?.trim();
-  if (configuredUrl) return configuredUrl.replace(/\/$/, "");
-
-  const currentOrigin = window.location.origin;
-  if (currentOrigin.includes(".lovableproject.com")) return PREVIEW_APP_URL;
-
-  return currentOrigin;
-};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -52,7 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: `${getAuthBaseUrl()}/auth`,
+        emailRedirectTo: `${getPublicAppUrl()}/auth`,
       },
     });
     return { error: error as Error | null };
