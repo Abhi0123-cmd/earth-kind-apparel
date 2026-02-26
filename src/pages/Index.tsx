@@ -72,7 +72,7 @@ const Index = () => {
         <div className="max-w-4xl mx-auto text-center">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
             <h2 className="font-display text-5xl md:text-7xl mb-6">There's always a second chance</h2>
-            <p className="text-primary-foreground/60 font-body text-lg leading-relaxed max-w-2xl mx-auto">second chance is not a moment in time, it's an identity.
+            <p className="text-primary-foreground/60 font-body text-lg leading-relaxed max-w-2xl mx-auto">"second chance is not a moment in time, it's an identity"
 
 
             </p>
