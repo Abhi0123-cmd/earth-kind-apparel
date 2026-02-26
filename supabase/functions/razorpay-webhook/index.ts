@@ -123,7 +123,25 @@ Deno.serve(async (req) => {
           .update({ status: "paid", payment_id: gatewayPaymentId })
           .eq("id", payment.order_id);
 
-        console.log(`Payment captured: ${payment.id} for order ${payment.order_id}`);
+        // Deduct inventory atomically
+        const { data: orderItems } = await supabase
+          .from("order_items")
+          .select("variant_id, quantity")
+          .eq("order_id", payment.order_id);
+
+        if (orderItems) {
+          for (const item of orderItems) {
+            const { error: stockErr } = await supabase.rpc("decrement_stock", {
+              p_variant_id: item.variant_id,
+              p_quantity: item.quantity,
+            });
+            if (stockErr) {
+              console.error(`Stock decrement failed for variant ${item.variant_id}:`, stockErr.message);
+            }
+          }
+        }
+
+        console.log(`Payment captured + inventory deducted: ${payment.id} for order ${payment.order_id}`);
         break;
       }
 
@@ -168,7 +186,7 @@ Deno.serve(async (req) => {
               .eq("gateway_refund_id", refundEntity.id);
           }
 
-          // Update payment status if fully refunded
+          // Update payment status if fully refunded + restore stock
           if (event === "refund.processed") {
             await supabase
               .from("payments")
@@ -179,6 +197,21 @@ Deno.serve(async (req) => {
               .from("orders")
               .update({ status: "refunded" })
               .eq("id", payment.order_id);
+
+            // Restore inventory
+            const { data: orderItems } = await supabase
+              .from("order_items")
+              .select("variant_id, quantity")
+              .eq("order_id", payment.order_id);
+
+            if (orderItems) {
+              for (const item of orderItems) {
+                await supabase.rpc("restore_stock", {
+                  p_variant_id: item.variant_id,
+                  p_quantity: item.quantity,
+                });
+              }
+            }
           }
 
           console.log(`Refund ${event}: ${refundEntity.id} for order ${payment.order_id}`);
