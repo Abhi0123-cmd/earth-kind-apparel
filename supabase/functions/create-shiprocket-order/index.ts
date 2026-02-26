@@ -9,13 +9,15 @@ const corsHeaders = {
 const SHIPROCKET_BASE = "https://apiv2.shiprocket.in/v1/external";
 
 async function getShiprocketToken(): Promise<string> {
+  const email = Deno.env.get("SHIPROCKET_EMAIL") || "";
+  const password = Deno.env.get("SHIPROCKET_PASSWORD") || "";
+  
+  console.log(`Shiprocket auth attempt - email: "${email.substring(0, 3)}...${email.substring(email.length - 4)}" (len: ${email.length}), password len: ${password.length}`);
+
   const res = await fetch(`${SHIPROCKET_BASE}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      email: Deno.env.get("SHIPROCKET_EMAIL"),
-      password: Deno.env.get("SHIPROCKET_PASSWORD"),
-    }),
+    body: JSON.stringify({ email, password }),
   });
   const data = await res.json();
   if (!data.token) {
