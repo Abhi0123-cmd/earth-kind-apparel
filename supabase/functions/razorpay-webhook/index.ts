@@ -142,6 +142,27 @@ Deno.serve(async (req) => {
         }
 
         console.log(`Payment captured + inventory deducted: ${payment.id} for order ${payment.order_id}`);
+
+        // Auto-trigger Shiprocket order creation
+        try {
+          const shiprocketRes = await fetch(
+            `${Deno.env.get("SUPABASE_URL")}/functions/v1/create-shiprocket-order`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify({ order_id: payment.order_id }),
+            }
+          );
+          const shiprocketData = await shiprocketRes.json();
+          console.log(`Shiprocket order result for ${payment.order_id}:`, JSON.stringify(shiprocketData));
+        } catch (shipErr) {
+          // Don't fail the webhook if Shiprocket fails — it can be retried
+          console.error(`Shiprocket order creation failed for ${payment.order_id}:`, shipErr);
+        }
+
         break;
       }
 
