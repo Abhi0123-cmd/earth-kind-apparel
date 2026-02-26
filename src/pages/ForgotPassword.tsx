@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getPublicAppUrl } from "@/lib/auth-urls";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -15,7 +16,7 @@ export default function ForgotPassword() {
     setError("");
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${getPublicAppUrl()}/reset-password`,
     });
 
     if (error) {

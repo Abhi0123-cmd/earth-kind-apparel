@@ -16,14 +16,22 @@ export function useAdminGuard() {
       return;
     }
 
-    supabase.rpc("is_admin").then(({ data }) => {
-      if (data) {
-        setIsAdmin(true);
-      } else {
-        setIsAdmin(false);
-        navigate("/");
-      }
-    });
+    supabase
+      .rpc("has_role", { _user_id: user.id, _role: "admin" })
+      .then(({ data, error }) => {
+        if (error) {
+          setIsAdmin(false);
+          navigate("/");
+          return;
+        }
+
+        if (data) {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+          navigate("/");
+        }
+      });
   }, [user, authLoading, navigate]);
 
   return { isAdmin, loading: authLoading || isAdmin === null };
