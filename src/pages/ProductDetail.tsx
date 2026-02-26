@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchProductBySlug, formatPrice } from "@/lib/products";
 import { getProduct, formatPrice as mockFormatPrice } from "@/data/mock-products";
 import { useCart } from "@/context/CartContext";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, Minus, Plus } from "lucide-react";
 
 export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>();
@@ -25,11 +25,14 @@ export default function ProductDetail() {
   const [selectedSize, setSelectedSize] = useState("");
   const [imageIndex, setImageIndex] = useState(0);
   const [added, setAdded] = useState(false);
+  const [quantity, setQuantity] = useState(1);
 
   const colors = useMemo(() => {
     if (!product) return [];
     const map = new Map<string, { color: string; hex: string }>();
-    product.variants.forEach((v) => map.set(v.color, { color: v.color, hex: v.color_hex }));
+    product.variants.forEach((v) => {
+      if (v.is_active) map.set(v.color, { color: v.color, hex: v.color_hex });
+    });
     return Array.from(map.values());
   }, [product]);
 
@@ -67,10 +70,13 @@ export default function ProductDetail() {
 
   const handleAddToCart = () => {
     if (!selectedVariant) return;
-    addItem(product, selectedVariant, 1);
+    addItem(product, selectedVariant, quantity);
     setAdded(true);
+    setQuantity(1);
     setTimeout(() => setAdded(false), 2000);
   };
+
+  const maxQty = selectedVariant ? Math.min(selectedVariant.stock, 10) : 10;
 
   const productImages = product.images.length > 0 ? product.images : ["/placeholder.svg"];
 
@@ -116,22 +122,30 @@ export default function ProductDetail() {
             </div>
             <p className="text-muted-foreground font-body leading-relaxed mb-8">{product.description}</p>
 
-            <div className="mb-6">
-              <p className="text-sm font-medium font-body mb-3">Color — <span className="text-muted-foreground">{selectedColor}</span></p>
-              <div className="flex gap-3">
-                {colors.map((c) => (
-                  <button
-                    key={c.color}
-                    onClick={() => { setSelectedColor(c.color); setSelectedSize(""); }}
-                    className={`w-10 h-10 rounded-full border-2 transition-all ${selectedColor === c.color ? "border-foreground scale-110" : "border-border"}`}
-                    style={{ backgroundColor: c.hex }}
-                    title={c.color}
-                  />
-                ))}
+            {colors.length > 1 && (
+              <div className="mb-6">
+                <p className="text-sm font-medium font-body mb-3">Color — <span className="text-muted-foreground">{selectedColor}</span></p>
+                <div className="flex gap-3">
+                  {colors.map((c) => (
+                    <button
+                      key={c.color}
+                      onClick={() => { setSelectedColor(c.color); setSelectedSize(""); }}
+                      className={`w-10 h-10 rounded-full border-2 transition-all ${selectedColor === c.color ? "border-foreground scale-110" : "border-border"}`}
+                      style={{ backgroundColor: c.hex }}
+                      title={c.color}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className="mb-8">
+            {colors.length === 1 && (
+              <div className="mb-6">
+                <p className="text-sm font-medium font-body">Color — <span className="text-muted-foreground">{selectedColor}</span></p>
+              </div>
+            )}
+
+            <div className="mb-6">
               <p className="text-sm font-medium font-body mb-3">Size</p>
               <div className="flex gap-2 flex-wrap">
                 {sizes.map((s) => (
@@ -150,6 +164,27 @@ export default function ProductDetail() {
                     {s.size}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <div className="mb-8">
+              <p className="text-sm font-medium font-body mb-3">Quantity</p>
+              <div className="flex items-center border border-border w-fit">
+                <button
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  className="px-4 py-3 text-muted-foreground hover:text-foreground transition-colors"
+                  disabled={quantity <= 1}
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <span className="px-6 py-3 font-body text-sm font-medium min-w-[3rem] text-center">{quantity}</span>
+                <button
+                  onClick={() => setQuantity(Math.min(maxQty, quantity + 1))}
+                  className="px-4 py-3 text-muted-foreground hover:text-foreground transition-colors"
+                  disabled={quantity >= maxQty}
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
               </div>
             </div>
 

@@ -19,6 +19,9 @@ import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Orders from "./pages/Orders";
+import AboutUs from "./pages/AboutUs";
+import Help from "./pages/Help";
+import CustomerService from "./pages/CustomerService";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminInventory from "./pages/admin/AdminInventory";
@@ -53,6 +56,9 @@ const App = () => (
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/orders" element={<Orders />} />
+                <Route path="/about" element={<AboutUs />} />
+                <Route path="/help" element={<Help />} />
+                <Route path="/customer-service" element={<CustomerService />} />
                 {/* Admin Routes */}
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/orders" element={<AdminOrders />} />
