@@ -7,8 +7,8 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           <div>
             <h3 className="font-display text-3xl mb-4">SECOND CHANCE</h3>
-            <p className="text-primary-foreground/60 text-sm leading-relaxed font-body">
-              Premium essentials built to last. Every piece is a second chance to feel your best.
+            <p className="text-primary-foreground/60 text-sm leading-relaxed font-body">building identity, one drop at a time. 
+
             </p>
           </div>
 
@@ -46,6 +46,6 @@ export default function Footer() {
           </p>
         </div>
       </div>
-    </footer>
-  );
+    </footer>);
+
 }
