@@ -578,6 +578,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_stock: {
+        Args: { p_items: Json }
+        Returns: {
+          available: number
+          requested: number
+          variant_id: string
+        }[]
+      }
+      decrement_stock: {
+        Args: { p_quantity: number; p_variant_id: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -586,6 +598,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      restore_stock: {
+        Args: { p_quantity: number; p_variant_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "user"

@@ -59,6 +59,26 @@ export default function Checkout() {
     setLoading(true);
 
     try {
+      // 0. Check stock availability
+      const stockCheckItems = items.map((item) => ({
+        variant_id: item.variant.id,
+        quantity: item.quantity,
+      }));
+
+      const { data: outOfStock, error: stockError } = await supabase.rpc("check_stock", {
+        p_items: stockCheckItems,
+      });
+
+      if (stockError) throw new Error("Could not verify stock availability");
+
+      if (outOfStock && outOfStock.length > 0) {
+        const names = outOfStock.map((s: any) => {
+          const item = items.find((i) => i.variant.id === s.variant_id);
+          return item ? `${item.product.name} (${item.variant.color}/${item.variant.size}) — only ${s.available} left` : "Unknown item";
+        });
+        throw new Error(`Out of stock: ${names.join(", ")}`);
+      }
+
       // 1. Create order in DB
       const { data: order, error: orderError } = await supabase
         .from("orders")
