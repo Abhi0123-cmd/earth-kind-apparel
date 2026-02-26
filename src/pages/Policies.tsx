@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
 
 const sections = [
   {
@@ -27,7 +28,7 @@ You have the right to:
 • Request deletion of your account and all associated data
 • Opt out of marketing communications at any time
 
-For data requests, contact us at privacy@secondchance.in.`,
+For data requests, contact us at secondchancestorre@gmail.com.`,
   },
   {
     id: "shipping",
@@ -59,6 +60,25 @@ Refunds are issued to the original payment method. For replacements, a new shipm
 
 If an order fails due to a system error, payment will be refunded automatically and immediately.`,
   },
+  {
+    id: "replacement",
+    title: "Replacement Policy",
+    content: `If you receive a defective, damaged, or incorrect product, you are eligible for a free replacement.
+
+Eligibility:
+• Replacement requests must be raised within 7 days of delivery
+• The item must not have been altered, washed, or worn beyond initial try-on
+• Photo evidence of the defect or issue is required
+
+Process:
+1. Go to Customer Service and select "Replacement"
+2. Enter your Order ID and describe the issue
+3. Our team will review and approve within 24-48 hours
+4. A reverse pickup will be arranged at no extra cost
+5. Once we receive and verify the returned item, a replacement will be shipped immediately
+
+If the same product/variant is out of stock, we will offer a full refund instead. You will be notified at every step via email.`,
+  },
 ];
 
 export default function Policies() {
@@ -66,24 +86,51 @@ export default function Policies() {
 
   useEffect(() => {
     if (hash) {
-      const el = document.getElementById(hash.slice(1));
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setTimeout(() => {
+        const el = document.getElementById(hash.slice(1));
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
     }
   }, [hash]);
 
   return (
     <div className="min-h-screen pt-16">
       <div className="max-w-3xl mx-auto px-6 lg:px-12 py-16">
-        <h1 className="font-display text-5xl md:text-7xl mb-16">POLICIES</h1>
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="font-display text-5xl md:text-7xl mb-8"
+        >
+          POLICIES
+        </motion.h1>
+
+        <nav className="flex flex-wrap gap-2 mb-16">
+          {sections.map((s) => (
+            <a
+              key={s.id}
+              href={`#${s.id}`}
+              className="text-xs font-body uppercase tracking-wider text-muted-foreground hover:text-foreground border border-border px-3 py-1.5 transition-colors"
+            >
+              {s.title}
+            </a>
+          ))}
+        </nav>
 
         <div className="space-y-20">
           {sections.map((section) => (
-            <section key={section.id} id={section.id}>
+            <motion.section
+              key={section.id}
+              id={section.id}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
               <h2 className="font-display text-3xl mb-6">{section.title}</h2>
               <div className="text-muted-foreground font-body text-sm leading-relaxed whitespace-pre-line">
                 {section.content}
               </div>
-            </section>
+            </motion.section>
           ))}
         </div>
       </div>
