@@ -120,26 +120,32 @@ export default function Checkout() {
           contact: address.phone,
         },
         handler: async (response: any) => {
-          // Payment successful — update payment record
+          // Verify payment server-side
           try {
-            await supabase
-              .from("payments")
-              .update({
-                gateway_payment_id: response.razorpay_payment_id,
-                status: "captured",
-              })
-              .eq("id", rzData.payment_id);
+            const { data: verifyData, error: verifyError } = await supabase.functions.invoke(
+              "verify-razorpay-payment",
+              {
+                body: {
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  order_id: order.id,
+                  payment_id: rzData.payment_id,
+                },
+              }
+            );
 
-            await supabase
-              .from("orders")
-              .update({ status: "paid", payment_id: response.razorpay_payment_id })
-              .eq("id", order.id);
+            if (verifyError || !verifyData?.verified) {
+              setError("Payment verification failed. Please contact support.");
+              setLoading(false);
+              return;
+            }
 
             clearCart();
             navigate("/order-confirmation");
           } catch (err) {
-            console.error("Post-payment update error:", err);
-            // Payment was captured by Razorpay, so still redirect
+            console.error("Verification error:", err);
+            // Razorpay captured payment, redirect anyway
             clearCart();
             navigate("/order-confirmation");
           }
