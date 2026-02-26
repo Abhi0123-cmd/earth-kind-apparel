@@ -26,6 +26,7 @@ export default function ProductDetail() {
   const [imageIndex, setImageIndex] = useState(0);
   const [added, setAdded] = useState(false);
   const [quantity, setQuantity] = useState(1);
+  const [showMaxStock, setShowMaxStock] = useState(false);
 
   const colors = useMemo(() => {
     if (!product) return [];
@@ -179,13 +180,23 @@ export default function ProductDetail() {
                 </button>
                 <span className="px-6 py-3 font-body text-sm font-medium min-w-[3rem] text-center">{quantity}</span>
                 <button
-                  onClick={() => setQuantity(Math.min(maxQty, quantity + 1))}
+                  onClick={() => {
+                    if (quantity >= maxQty) {
+                      setShowMaxStock(true);
+                      setTimeout(() => setShowMaxStock(false), 2000);
+                    } else {
+                      setQuantity(quantity + 1);
+                      setShowMaxStock(false);
+                    }
+                  }}
                   className="px-4 py-3 text-muted-foreground hover:text-foreground transition-colors"
-                  disabled={quantity >= maxQty}
                 >
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
+              {showMaxStock && (
+                <p className="text-xs text-destructive font-body mt-1 animate-in fade-in">Max stock reached</p>
+              )}
             </div>
 
             <button
