@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
         Authorization: "Basic " + btoa(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`),
       },
       body: JSON.stringify({
-        amount: amount * 100, // Razorpay expects paise
+        amount: amount, // amount is already in paise
         currency: "INR",
         receipt: order_id,
       }),
