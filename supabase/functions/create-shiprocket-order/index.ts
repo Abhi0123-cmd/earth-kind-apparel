@@ -8,11 +8,32 @@ const corsHeaders = {
 
 const SHIPROCKET_BASE = "https://apiv2.shiprocket.in/v1/external";
 
+/**
+ * Get a valid Shiprocket token.
+ * 1. Try the stored SHIPROCKET_TOKEN first.
+ * 2. If it's expired / returns 401, re-login with email/password to get a fresh one.
+ */
 async function getShiprocketToken(): Promise<string> {
+  // First try the stored token
+  const storedToken = Deno.env.get("SHIPROCKET_TOKEN") || "";
+  if (storedToken) {
+    // Quick validation: hit a lightweight endpoint
+    const check = await fetch(`${SHIPROCKET_BASE}/account/details`, {
+      headers: { Authorization: `Bearer ${storedToken}` },
+    });
+    if (check.status === 200) {
+      console.log("Using stored SHIPROCKET_TOKEN (valid)");
+      // consume body
+      await check.text();
+      return storedToken;
+    }
+    console.log(`Stored token expired/invalid (status ${check.status}), re-authenticating...`);
+    await check.text();
+  }
+
+  // Fallback: login with email/password to get a fresh token
   const email = Deno.env.get("SHIPROCKET_EMAIL") || "";
   const password = Deno.env.get("SHIPROCKET_PASSWORD") || "";
-  
-  console.log(`Shiprocket auth attempt - email: "${email.substring(0, 3)}...${email.substring(email.length - 4)}" (len: ${email.length}), password len: ${password.length}`);
 
   const res = await fetch(`${SHIPROCKET_BASE}/auth/login`, {
     method: "POST",
@@ -23,6 +44,7 @@ async function getShiprocketToken(): Promise<string> {
   if (!data.token) {
     throw new Error(`Shiprocket auth failed: ${JSON.stringify(data)}`);
   }
+  console.log("Re-authenticated with email/password, got fresh token");
   return data.token;
 }
 
@@ -58,7 +80,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Fetch order with items
+    // Fetch order
     const { data: order, error: orderErr } = await supabase
       .from("orders")
       .select("*")
@@ -73,7 +95,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check if shipment already exists (idempotency)
+    // Idempotency check
     const { data: existingShipment } = await supabase
       .from("shipments")
       .select("id")
@@ -100,7 +122,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Authenticate with Shiprocket
+    // Get valid token (auto-regenerates if expired)
     const token = await getShiprocketToken();
 
     // Build Shiprocket order payload
@@ -108,7 +130,7 @@ Deno.serve(async (req) => {
     const orderDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
     const shiprocketPayload = {
-      order_id: order_id.substring(0, 20), // Shiprocket has a max length
+      order_id: order_id.substring(0, 20),
       order_date: orderDate,
       pickup_location: "Primary",
       billing_customer_name: order.shipping_full_name?.split(" ")[0] || "Customer",
@@ -138,7 +160,6 @@ Deno.serve(async (req) => {
       weight: 0.5,
     };
 
-    // Step 1: Create order on Shiprocket
     const createResult = await shiprocketRequest(token, "/orders/create/adhoc", shiprocketPayload);
 
     if (!createResult.order_id) {
@@ -151,10 +172,9 @@ Deno.serve(async (req) => {
 
     const shiprocketOrderId = createResult.order_id;
     const shipmentId = createResult.shipment_id;
-
     console.log(`Shiprocket order created: ${shiprocketOrderId}, shipment: ${shipmentId}`);
 
-    // Step 2: Request AWB assignment
+    // Request AWB assignment
     let awbNumber: string | null = null;
     let carrier: string | null = null;
 
@@ -168,7 +188,6 @@ Deno.serve(async (req) => {
         carrier = awbResult.response.data.courier_name || null;
         console.log(`AWB assigned: ${awbNumber}, carrier: ${carrier}`);
 
-        // Step 3: Request pickup
         await shiprocketRequest(token, "/courier/generate/pickup", {
           shipment_id: [shipmentId],
         });
@@ -183,10 +202,9 @@ Deno.serve(async (req) => {
       tracking_number: String(shiprocketOrderId),
       awb_number: awbNumber,
       carrier: carrier,
-      status: awbNumber ? "pending" : "pending",
+      status: "pending",
     });
 
-    // Update order status to processing
     await supabase
       .from("orders")
       .update({ status: "processing", tracking_id: awbNumber })
