@@ -66,9 +66,9 @@ export default function Orders() {
         ) : (
           <div className="space-y-4">
             {orders.map((order) => (
-              <div key={order.id} className="border border-border p-6 flex justify-between items-center">
+              <Link key={order.id} to={`/orders/${order.id}`} className="border border-border p-6 flex justify-between items-center hover:bg-secondary/50 transition-colors group">
                 <div>
-                  <p className="text-sm font-body font-medium">Order #{order.id.slice(0, 8)}</p>
+                  <p className="text-sm font-body font-medium group-hover:underline">Order #{order.id.slice(0, 8)}</p>
                   <p className="text-xs text-muted-foreground font-body mt-1">
                     {new Date(order.created_at).toLocaleDateString()}
                   </p>
@@ -76,10 +76,10 @@ export default function Orders() {
                 <div className="text-right">
                   <p className="text-sm font-body font-medium">₹{(order.total / 100).toFixed(0)}</p>
                   <span className="inline-block mt-1 px-3 py-1 text-xs font-body uppercase tracking-wider bg-secondary text-secondary-foreground">
-                    {order.status}
+                    {order.status.replace(/_/g, " ")}
                   </span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
