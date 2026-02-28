@@ -20,6 +20,7 @@ import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Orders from "./pages/Orders";
+import OrderDetail from "./pages/OrderDetail";
 import AboutUs from "./pages/AboutUs";
 import Help from "./pages/Help";
 import CustomerService from "./pages/CustomerService";
@@ -58,6 +59,7 @@ const App = () => (
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/orders" element={<Orders />} />
+                <Route path="/orders/:id" element={<OrderDetail />} />
                 <Route path="/about" element={<AboutUs />} />
                 <Route path="/help" element={<Help />} />
                 <Route path="/customer-service" element={<CustomerService />} />
