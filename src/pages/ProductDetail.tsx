@@ -79,7 +79,9 @@ export default function ProductDetail() {
 
   const maxQty = selectedVariant ? selectedVariant.stock : 1;
 
-  const productImages = product.images.length > 0 ? product.images : ["/placeholder.svg"];
+  // Use DB images if available, otherwise fall back to mock product images, then placeholder
+  const fallbackImages = mockProduct?.images && mockProduct.images.length > 0 ? mockProduct.images : ["/placeholder.svg"];
+  const productImages = product.images && product.images.length > 0 ? product.images : fallbackImages;
 
   return (
     <div className="min-h-screen pt-16">
