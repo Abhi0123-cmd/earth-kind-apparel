@@ -131,7 +131,7 @@ export default function Checkout() {
         key: rzData.razorpay_key_id,
         amount: rzData.amount,
         currency: rzData.currency,
-        name: "Earth Kind Apparel",
+        name: "Second Chance",
         description: `Order #${order.id.slice(0, 8)}`,
         order_id: rzData.razorpay_order_id,
         prefill: {
