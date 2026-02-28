@@ -27,12 +27,8 @@ const integrations: Integration[] = [
   },
   {
     name: "Zoho Books",
-    description: "Automated invoice generation & accounting. Syncs orders as invoices.",
-    fields: [
-      { key: "ZOHO_CLIENT_ID", label: "Client ID", placeholder: "Enter your Zoho client ID" },
-      { key: "ZOHO_CLIENT_SECRET", label: "Client Secret", placeholder: "Enter your Zoho client secret" },
-      { key: "ZOHO_REFRESH_TOKEN", label: "Refresh Token", placeholder: "Enter your Zoho refresh token" },
-    ],
+    description: "Automated invoice generation & accounting. Connected via OAuth — invoices are created automatically on payment capture.",
+    fields: [],
   },
   {
     name: "Brevo",
