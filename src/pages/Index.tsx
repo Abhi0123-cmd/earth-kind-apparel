@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchProducts, formatPrice } from "@/lib/products";
 import { mockProducts, formatPrice as mockFormatPrice } from "@/data/mock-products";
 import heroImage from "@/assets/hero-image.jpg";
-import productBlack from "@/assets/product-tshirt-black.jpg";
+import productWhite from "@/assets/product-tshirt-white.jpg";
 
 const Index = () => {
   const { data: products } = useQuery({
@@ -44,7 +44,7 @@ const Index = () => {
           <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
               <img
-              src={featured.images.length > 0 ? featured.images[0] : productBlack}
+              src={featured.images.length > 0 ? featured.images[0] : productWhite}
               alt={featured.name}
               className="w-full aspect-square object-cover bg-secondary" />
 
