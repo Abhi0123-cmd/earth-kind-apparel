@@ -8,7 +8,26 @@ const corsHeaders = {
 
 const SHIPROCKET_BASE = "https://apiv2.shiprocket.in/v1/external";
 
+/**
+ * Get a valid Shiprocket token.
+ * 1. Try the stored SHIPROCKET_TOKEN first.
+ * 2. If expired/invalid, re-login with email/password for a fresh one.
+ */
 async function getShiprocketToken(): Promise<string> {
+  const storedToken = Deno.env.get("SHIPROCKET_TOKEN") || "";
+  if (storedToken) {
+    const check = await fetch(`${SHIPROCKET_BASE}/account/details`, {
+      headers: { Authorization: `Bearer ${storedToken}` },
+    });
+    if (check.status === 200) {
+      console.log("Using stored SHIPROCKET_TOKEN (valid)");
+      await check.text();
+      return storedToken;
+    }
+    console.log(`Stored token expired (status ${check.status}), re-authenticating...`);
+    await check.text();
+  }
+
   const res = await fetch(`${SHIPROCKET_BASE}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -21,6 +40,7 @@ async function getShiprocketToken(): Promise<string> {
   if (!data.token) {
     throw new Error(`Shiprocket auth failed: ${JSON.stringify(data)}`);
   }
+  console.log("Re-authenticated with email/password, got fresh token");
   return data.token;
 }
 
@@ -58,7 +78,6 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Fetch all non-terminal shipments with AWB numbers
     const { data: shipments, error: shipErr } = await supabase
       .from("shipments")
       .select("id, order_id, awb_number, status")
@@ -88,9 +107,7 @@ Deno.serve(async (req) => {
       try {
         const trackRes = await fetch(
           `${SHIPROCKET_BASE}/courier/track/awb/${shipment.awb_number}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         const trackData = await trackRes.json();
 
@@ -103,11 +120,8 @@ Deno.serve(async (req) => {
         }
 
         const newStatus = mapShiprocketStatus(statusCode);
-
-        // Skip if status hasn't changed
         if (newStatus === shipment.status) continue;
 
-        // Update shipment
         const updateData: Record<string, unknown> = { status: newStatus };
         if (newStatus === "picked_up") updateData.shipped_at = new Date().toISOString();
         if (newStatus === "delivered") updateData.delivered_at = new Date().toISOString();
@@ -117,7 +131,6 @@ Deno.serve(async (req) => {
           .update(updateData)
           .eq("id", shipment.id);
 
-        // Update order status
         const orderStatus = mapToOrderStatus(newStatus);
         if (orderStatus) {
           await supabase
