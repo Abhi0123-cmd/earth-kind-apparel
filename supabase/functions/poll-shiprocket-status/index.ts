@@ -8,11 +8,6 @@ const corsHeaders = {
 
 const SHIPROCKET_BASE = "https://apiv2.shiprocket.in/v1/external";
 
-/**
- * Get a valid Shiprocket token.
- * 1. Try the stored SHIPROCKET_TOKEN first.
- * 2. If expired/invalid, re-login with email/password for a fresh one.
- */
 async function getShiprocketToken(): Promise<string> {
   const storedToken = Deno.env.get("SHIPROCKET_TOKEN") || "";
   if (storedToken) {
@@ -67,6 +62,45 @@ function mapToOrderStatus(shipmentStatus: string): string | null {
   }
 }
 
+function getEmailTemplateForStatus(status: string): { template: string; subject: string } | null {
+  switch (status) {
+    case "picked_up":
+    case "in_transit":
+    case "out_for_delivery":
+      return { template: "shipping_update", subject: "Your Order Has Been Shipped" };
+    case "delivered":
+      return { template: "delivery_confirmation", subject: "Your Order Has Been Delivered" };
+    default:
+      return null;
+  }
+}
+
+async function sendEmail(
+  template: string,
+  to: string,
+  toName: string,
+  subject: string,
+  data: Record<string, unknown>
+) {
+  try {
+    const res = await fetch(
+      `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-brevo-email`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        },
+        body: JSON.stringify({ to, to_name: toName, subject, template, data }),
+      }
+    );
+    const result = await res.json();
+    console.log(`Email sent (${template} to ${to}):`, JSON.stringify(result));
+  } catch (emailErr) {
+    console.error(`Email send failed (${template} to ${to}):`, emailErr);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -80,7 +114,7 @@ Deno.serve(async (req) => {
 
     const { data: shipments, error: shipErr } = await supabase
       .from("shipments")
-      .select("id, order_id, awb_number, status")
+      .select("id, order_id, awb_number, status, tracking_number, carrier")
       .not("awb_number", "is", null)
       .not("status", "in", '("delivered","failed","returned")');
 
@@ -137,6 +171,30 @@ Deno.serve(async (req) => {
             .from("orders")
             .update({ status: orderStatus })
             .eq("id", shipment.order_id);
+        }
+
+        // Send email notification on status change
+        const emailInfo = getEmailTemplateForStatus(newStatus);
+        if (emailInfo) {
+          const { data: order } = await supabase
+            .from("orders")
+            .select("id, email, shipping_full_name")
+            .eq("id", shipment.order_id)
+            .single();
+
+          if (order?.email) {
+            await sendEmail(
+              emailInfo.template,
+              order.email,
+              order.shipping_full_name || "",
+              `${emailInfo.subject} — #${order.id.slice(0, 8).toUpperCase()}`,
+              {
+                order_id: order.id,
+                tracking_number: shipment.tracking_number || shipment.awb_number,
+                carrier: shipment.carrier || "Shiprocket",
+              }
+            );
+          }
         }
 
         console.log(`Shipment ${shipment.id} (AWB: ${shipment.awb_number}): ${shipment.status} → ${newStatus}`);
