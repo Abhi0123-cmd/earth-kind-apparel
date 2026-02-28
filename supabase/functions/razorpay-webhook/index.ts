@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const RAZORPAY_KEY_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET")!;
+    const RAZORPAY_WEBHOOK_SECRET = Deno.env.get("RAZORPAY_WEBHOOK_SECRET") || Deno.env.get("RAZORPAY_KEY_SECRET")!;
     const signature = req.headers.get("x-razorpay-signature");
     const rawBody = await req.text();
 
@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const isValid = await verifyWebhookSignature(rawBody, signature, RAZORPAY_KEY_SECRET);
+    const isValid = await verifyWebhookSignature(rawBody, signature, RAZORPAY_WEBHOOK_SECRET);
     if (!isValid) {
       console.error("Invalid webhook signature");
       return new Response(JSON.stringify({ error: "Invalid signature" }), {
