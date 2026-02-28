@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 const SENDER_EMAIL = "secondchancestorre@gmail.com";
-const SENDER_NAME = "Earth Kind Apparel";
+const SENDER_NAME = "Second Chance";
 
 interface EmailRequest {
   to: string;
@@ -24,8 +24,8 @@ function buildHtml(template: string, data: Record<string, unknown>): string {
   const footerStyle = `style="padding:24px;text-align:center;font-size:12px;color:#888;font-family:'Helvetica Neue',Arial,sans-serif"`;
   const btnStyle = `style="display:inline-block;background:#000;color:#fff;padding:12px 32px;text-decoration:none;font-size:13px;letter-spacing:2px;text-transform:uppercase;margin:16px 0"`;
 
-  const header = `<div ${headerStyle}><h1 style="margin:0;font-size:20px;letter-spacing:4px">EARTH KIND APPAREL</h1></div>`;
-  const footer = `<div ${footerStyle}><p>Thank you for choosing Earth Kind Apparel.</p><p style="margin-top:8px">© ${new Date().getFullYear()} Earth Kind Apparel. All rights reserved.</p></div>`;
+  const header = `<div ${headerStyle}><h1 style="margin:0;font-size:20px;letter-spacing:4px">SECOND CHANCE</h1></div>`;
+  const footer = `<div ${footerStyle}><p>Thank you for choosing Second Chance.</p><p style="margin-top:8px">© ${new Date().getFullYear()} Second Chance. All rights reserved.</p></div>`;
 
   let content = "";
 
