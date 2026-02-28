@@ -205,6 +205,25 @@ Deno.serve(async (req) => {
           console.error(`Shiprocket order creation failed for ${payment.order_id}:`, shipErr);
         }
 
+        // Auto-trigger Zoho Books invoice creation
+        try {
+          const zohoRes = await fetch(
+            `${Deno.env.get("SUPABASE_URL")}/functions/v1/create-zoho-invoice`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify({ order_id: payment.order_id }),
+            }
+          );
+          const zohoData = await zohoRes.json();
+          console.log(`Zoho invoice result for ${payment.order_id}:`, JSON.stringify(zohoData));
+        } catch (zohoErr) {
+          console.error(`Zoho invoice creation failed for ${payment.order_id}:`, zohoErr);
+        }
+
         break;
       }
 
