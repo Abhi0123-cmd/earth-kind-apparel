@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { ShoppingBag, Menu, X, User, LogOut, Shield } from "lucide-react";
+import { ShoppingBag, Menu, X, User, LogOut, Shield, Package } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { useState, useEffect } from "react";
@@ -50,6 +50,11 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
+          {user && (
+            <Link to="/orders" className={`${linkClass("/orders")} flex items-center gap-1`}>
+              <Package className="w-3.5 h-3.5" /> Orders
+            </Link>
+          )}
           {isAdmin && (
             <Link to="/admin" className={`${linkClass("/admin")} flex items-center gap-1`}>
               <Shield className="w-3.5 h-3.5" /> Admin
@@ -119,6 +124,11 @@ export default function Navbar() {
               <Link to="/cart" onClick={() => setMobileOpen(false)} className={`text-lg font-display tracking-wider ${isActive("/cart") ? "text-foreground" : "text-muted-foreground"}`}>
                 BAG {totalItems > 0 && `(${totalItems})`}
               </Link>
+              {user && (
+                <Link to="/orders" onClick={() => setMobileOpen(false)} className={`text-lg font-display tracking-wider ${isActive("/orders") ? "text-foreground" : "text-muted-foreground"}`}>
+                  MY ORDERS
+                </Link>
+              )}
               {isAdmin && (
                 <Link to="/admin" onClick={() => setMobileOpen(false)} className="text-lg font-display tracking-wider text-muted-foreground">ADMIN</Link>
               )}
