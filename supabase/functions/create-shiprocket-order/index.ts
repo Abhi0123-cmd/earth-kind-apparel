@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
     const shiprocketPayload = {
       order_id: order_id.substring(0, 20),
       order_date: orderDate,
-      pickup_location: "Primary",
+      pickup_location: "Home",
       billing_customer_name: order.shipping_full_name?.split(" ")[0] || "Customer",
       billing_last_name: order.shipping_full_name?.split(" ").slice(1).join(" ") || "",
       billing_address: order.shipping_address_line_1 || "",
