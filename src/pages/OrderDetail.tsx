@@ -95,41 +95,36 @@ function getIdx(stages: { key: string }[], status: string): number {
 }
 
 /* ── Reusable horizontal timeline ── */
-function Timeline({ stages, currentStatus, failedStatus }: {
+function Timeline({ stages, currentStatus }: {
   stages: { key: string; label: string; icon: React.ElementType }[];
   currentStatus: string;
-  failedStatus?: string | null;
 }) {
-  const isFailed = failedStatus === currentStatus;
   const currentIdx = getIdx(stages, currentStatus);
 
   return (
     <div className="relative flex items-start justify-between">
       <div className="absolute top-5 left-0 right-0 h-px bg-border" />
       <div
-        className={`absolute top-5 left-0 h-px transition-all duration-500 ${isFailed ? "bg-destructive" : "bg-primary"}`}
+        className="absolute top-5 left-0 h-px transition-all duration-500 bg-primary"
         style={{ width: `${Math.max(0, currentIdx / (stages.length - 1)) * 100}%` }}
       />
       {stages.map((stage, i) => {
         const Icon = stage.icon;
         const isCompleted = currentIdx >= i;
         const isCurrent = currentIdx === i;
-        const isFailedStage = isFailed && isCurrent;
         return (
           <div key={stage.key} className="relative flex flex-col items-center z-10" style={{ width: `${100 / stages.length}%` }}>
             <div
               className={`w-10 h-10 flex items-center justify-center border-2 transition-colors ${
-                isFailedStage
-                  ? "bg-destructive border-destructive text-destructive-foreground"
-                  : isCompleted
+                isCompleted
                   ? "bg-primary border-primary text-primary-foreground"
                   : "bg-background border-border text-muted-foreground"
-              } ${isCurrent && !isFailedStage ? "ring-2 ring-primary/30 ring-offset-2 ring-offset-background" : ""}`}
+              } ${isCurrent ? "ring-2 ring-primary/30 ring-offset-2 ring-offset-background" : ""}`}
             >
-              {isFailedStage ? <XCircle className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
+              <Icon className="w-4 h-4" />
             </div>
             <span className={`mt-2 text-[10px] sm:text-xs font-body uppercase tracking-wider text-center ${
-              isFailedStage ? "text-destructive font-medium" : isCompleted ? "text-foreground font-medium" : "text-muted-foreground"
+              isCompleted ? "text-foreground font-medium" : "text-muted-foreground"
             }`}>
               {stage.label}
             </span>
@@ -254,7 +249,6 @@ export default function OrderDetail() {
             <Timeline
               stages={RETURN_STAGES}
               currentStatus={returnData?.status || "requested"}
-              failedStatus="rejected"
             />
             {returnData?.reason && (
               <p className="mt-4 text-sm font-body text-muted-foreground">
@@ -276,7 +270,6 @@ export default function OrderDetail() {
             <Timeline
               stages={REFUND_STAGES}
               currentStatus={refundData.status}
-              failedStatus="failed"
             />
             <div className="mt-4 font-body text-sm space-y-1">
               <p><span className="text-muted-foreground">Refund Amount:</span> <span className="font-medium">₹{(refundData.amount / 100).toFixed(0)}</span></p>
