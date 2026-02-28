@@ -2,8 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGuard } from "@/hooks/useAdminGuard";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { ShoppingCart, Package, RotateCcw, CreditCard, MessageSquare, IndianRupee } from "lucide-react";
-import { Loader2 } from "lucide-react";
+import { ShoppingCart, Package, RotateCcw, CreditCard, MessageSquare, IndianRupee, Loader2 } from "lucide-react";
 
 function StatCard({ title, value, icon: Icon, subtitle }: { title: string; value: string | number; icon: any; subtitle?: string }) {
   return (
@@ -24,12 +23,13 @@ function DashboardContent() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ["admin-stats"],
     queryFn: async () => {
-      const [orders, returns, refunds, tickets, revenue] = await Promise.all([
+      const [orders, returns, refunds, tickets, revenue, products] = await Promise.all([
         supabase.from("orders").select("id, status", { count: "exact" }),
         supabase.from("returns").select("id", { count: "exact" }),
         supabase.from("refunds").select("id", { count: "exact" }),
         supabase.from("support_tickets").select("id, status", { count: "exact" }),
         supabase.from("orders").select("total").in("status", ["paid", "processing", "shipped", "delivered"]),
+        supabase.from("products").select("id", { count: "exact" }).eq("is_active", true),
       ]);
 
       const totalRevenue = (revenue.data || []).reduce((s, o) => s + o.total, 0);
@@ -43,7 +43,20 @@ function DashboardContent() {
         totalRefunds: refunds.count || 0,
         openTickets,
         totalRevenue,
+        activeProducts: products.count || 0,
       };
+    },
+  });
+
+  const { data: activityLogs, isLoading: logsLoading } = useQuery({
+    queryKey: ["admin-activity-logs"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("activity_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(20);
+      return data || [];
     },
   });
 
@@ -65,12 +78,39 @@ function DashboardContent() {
         <StatCard title="Returns" value={stats?.totalReturns || 0} icon={RotateCcw} />
         <StatCard title="Refunds" value={stats?.totalRefunds || 0} icon={CreditCard} />
         <StatCard title="Open Tickets" value={stats?.openTickets || 0} icon={MessageSquare} />
-        <StatCard title="Products" value="1" icon={Package} subtitle="Active in catalog" />
+        <StatCard title="Products" value={stats?.activeProducts || 0} icon={Package} subtitle="Active in catalog" />
       </div>
 
       <div className="mt-12">
         <h2 className="font-display text-2xl mb-4">RECENT ACTIVITY</h2>
-        <p className="text-sm text-muted-foreground font-body">Activity logs will appear here as orders come in.</p>
+        {logsLoading ? (
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        ) : !activityLogs || activityLogs.length === 0 ? (
+          <p className="text-sm text-muted-foreground font-body">No activity yet. Actions like status updates will appear here.</p>
+        ) : (
+          <div className="space-y-2">
+            {activityLogs.map((log) => {
+              const meta = log.metadata as Record<string, any> | null;
+              return (
+                <div key={log.id} className="border border-border px-4 py-3 flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-body font-medium">{log.action}</p>
+                    <p className="text-xs text-muted-foreground font-body mt-0.5">
+                      {log.entity_type && <span className="uppercase">{log.entity_type}</span>}
+                      {log.entity_id && <span> #{log.entity_id.slice(0, 8)}</span>}
+                      {meta?.from && meta?.to && (
+                        <span> — {String(meta.from).replace(/_/g, " ")} → {String(meta.to).replace(/_/g, " ")}</span>
+                      )}
+                    </p>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground font-body whitespace-nowrap">
+                    {new Date(log.created_at).toLocaleString()}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
