@@ -10,12 +10,18 @@ const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 const SENDER_EMAIL = "secondchancestorre@gmail.com";
 const SENDER_NAME = "Second Chance";
 
+interface EmailAttachment {
+  name: string;
+  content: string; // base64
+}
+
 interface EmailRequest {
   to: string;
   to_name?: string;
   subject: string;
-  template: "order_confirmation" | "shipping_update" | "delivery_confirmation" | "refund_notification" | "return_update";
+  template: "order_confirmation" | "shipping_update" | "delivery_confirmation" | "refund_notification" | "return_update" | "invoice";
   data: Record<string, unknown>;
+  attachments?: EmailAttachment[];
 }
 
 function buildHtml(template: string, data: Record<string, unknown>): string {
@@ -82,6 +88,16 @@ function buildHtml(template: string, data: Record<string, unknown>): string {
       `;
       break;
     }
+    case "invoice": {
+      const { order_id: iid } = data;
+      content = `
+        <h2 style="font-size:18px;letter-spacing:2px">YOUR INVOICE</h2>
+        <p>Please find attached the invoice for your order <strong>#${(iid as string).slice(0, 8).toUpperCase()}</strong>.</p>
+        <p>If you have any questions about this invoice, feel free to reach out to us.</p>
+        <a href="https://earth-kind-apparel.lovable.app/orders" ${btnStyle}>VIEW ORDER</a>
+      `;
+      break;
+    }
   }
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;background:#ffffff">${header}<div ${bodyStyle}>${content}</div>${footer}</body></html>`;
@@ -98,7 +114,7 @@ Deno.serve(async (req) => {
       throw new Error("BREVO_API_KEY not configured");
     }
 
-    const { to, to_name, subject, template, data } = (await req.json()) as EmailRequest;
+    const { to, to_name, subject, template, data, attachments } = (await req.json()) as EmailRequest;
 
     if (!to || !subject || !template) {
       return new Response(JSON.stringify({ error: "Missing required fields: to, subject, template" }), {
@@ -109,12 +125,19 @@ Deno.serve(async (req) => {
 
     const htmlContent = buildHtml(template, data || {});
 
-    const brevoPayload = {
+    const brevoPayload: Record<string, unknown> = {
       sender: { name: SENDER_NAME, email: SENDER_EMAIL },
       to: [{ email: to, name: to_name || to }],
       subject,
       htmlContent,
     };
+
+    if (attachments?.length) {
+      brevoPayload.attachment = attachments.map((a) => ({
+        name: a.name,
+        content: a.content,
+      }));
+    }
 
     const brevoRes = await fetch(BREVO_API_URL, {
       method: "POST",

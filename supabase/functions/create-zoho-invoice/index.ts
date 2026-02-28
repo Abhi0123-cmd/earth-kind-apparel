@@ -167,6 +167,56 @@ Deno.serve(async (req) => {
     // Mark invoice as sent
     await zohoApi(token, "POST", `/invoices/${invoiceId}/status/sent`);
 
+    // Download invoice PDF and email to customer
+    if (order.email) {
+      try {
+        const orgId = Deno.env.get("ZOHO_ORG_ID")!;
+        const pdfRes = await fetch(
+          `https://www.zohoapis.in/books/v3/invoices/${invoiceId}?organization_id=${orgId}&accept=pdf`,
+          {
+            headers: { Authorization: `Zoho-oauthtoken ${token}` },
+          }
+        );
+
+        if (pdfRes.ok) {
+          const pdfBuffer = await pdfRes.arrayBuffer();
+          const base64Pdf = btoa(
+            String.fromCharCode(...new Uint8Array(pdfBuffer))
+          );
+
+          const emailRes = await fetch(
+            `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-brevo-email`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify({
+                to: order.email,
+                to_name: order.shipping_full_name || "",
+                subject: `Invoice — #${order.id.slice(0, 8).toUpperCase()}`,
+                template: "invoice",
+                data: { order_id: order.id },
+                attachments: [
+                  {
+                    name: `Invoice-${order.id.slice(0, 8).toUpperCase()}.pdf`,
+                    content: base64Pdf,
+                  },
+                ],
+              }),
+            }
+          );
+          const emailData = await emailRes.json();
+          console.log(`Invoice email sent to ${order.email}:`, JSON.stringify(emailData));
+        } else {
+          console.error(`Failed to download Zoho PDF: ${pdfRes.status}`);
+        }
+      } catch (pdfErr) {
+        console.error("Invoice PDF email failed:", pdfErr);
+      }
+    }
+
     return new Response(
       JSON.stringify({ ok: true, invoice_id: invoiceId }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
