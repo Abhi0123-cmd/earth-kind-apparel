@@ -26,6 +26,7 @@ import Help from "./pages/Help";
 import CustomerService from "./pages/CustomerService";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminOrders from "./pages/admin/AdminOrders";
+import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
 import AdminInventory from "./pages/admin/AdminInventory";
 import AdminReturns from "./pages/admin/AdminReturns";
 import AdminRefunds from "./pages/admin/AdminRefunds";
@@ -66,6 +67,7 @@ const App = () => (
                 {/* Admin Routes */}
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/orders" element={<AdminOrders />} />
+                <Route path="/admin/orders/:id" element={<AdminOrderDetail />} />
                 <Route path="/admin/inventory" element={<AdminInventory />} />
                 <Route path="/admin/returns" element={<AdminReturns />} />
                 <Route path="/admin/refunds" element={<AdminRefunds />} />
