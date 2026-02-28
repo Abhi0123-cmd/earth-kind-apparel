@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { ArrowLeft, Loader2, Package, Truck, CheckCircle2, Clock, XCircle, RotateCcw, CreditCard, Box } from "lucide-react";
+import {
+  ArrowLeft, Loader2, Package, Truck, CheckCircle2, Clock,
+  XCircle, RotateCcw, CreditCard, Box, PackageOpen, PackageCheck,
+  Banknote, AlertCircle,
+} from "lucide-react";
 
 interface OrderData {
   id: string;
@@ -42,6 +46,23 @@ interface Shipment {
   delivered_at: string | null;
 }
 
+interface ReturnData {
+  id: string;
+  status: string;
+  reason: string | null;
+  created_at: string;
+  admin_notes: string | null;
+}
+
+interface RefundData {
+  id: string;
+  status: string;
+  amount: number;
+  reason: string | null;
+  created_at: string;
+}
+
+/* ── Delivery timeline ── */
 const STAGES = [
   { key: "pending", label: "Order Placed", icon: Clock },
   { key: "confirmed", label: "Confirmed", icon: Package },
@@ -51,17 +72,72 @@ const STAGES = [
   { key: "delivered", label: "Delivered", icon: CheckCircle2 },
 ];
 
-const TERMINAL_STATUSES: Record<string, { label: string; icon: typeof XCircle }> = {
-  cancelled: { label: "Cancelled", icon: XCircle },
-  refunded: { label: "Refunded", icon: RotateCcw },
-  return_requested: { label: "Return Requested", icon: RotateCcw },
-  return_approved: { label: "Return Approved", icon: RotateCcw },
-  returned: { label: "Returned", icon: RotateCcw },
-};
+/* ── Return timeline ── */
+const RETURN_STAGES = [
+  { key: "requested", label: "Requested", icon: RotateCcw },
+  { key: "approved", label: "Approved", icon: CheckCircle2 },
+  { key: "pickup_scheduled", label: "Pickup Scheduled", icon: Truck },
+  { key: "picked_up", label: "Picked Up", icon: PackageOpen },
+  { key: "received", label: "Received", icon: PackageCheck },
+  { key: "completed", label: "Completed", icon: CheckCircle2 },
+];
 
-function getStageIndex(status: string): number {
-  const idx = STAGES.findIndex((s) => s.key === status);
+/* ── Refund timeline ── */
+const REFUND_STAGES = [
+  { key: "pending", label: "Initiated", icon: Clock },
+  { key: "processing", label: "Processing", icon: Banknote },
+  { key: "completed", label: "Credited", icon: CheckCircle2 },
+];
+
+function getIdx(stages: { key: string }[], status: string): number {
+  const idx = stages.findIndex((s) => s.key === status);
   return idx >= 0 ? idx : -1;
+}
+
+/* ── Reusable horizontal timeline ── */
+function Timeline({ stages, currentStatus, failedStatus }: {
+  stages: { key: string; label: string; icon: React.ElementType }[];
+  currentStatus: string;
+  failedStatus?: string | null;
+}) {
+  const isFailed = failedStatus === currentStatus;
+  const currentIdx = getIdx(stages, currentStatus);
+
+  return (
+    <div className="relative flex items-start justify-between">
+      <div className="absolute top-5 left-0 right-0 h-px bg-border" />
+      <div
+        className={`absolute top-5 left-0 h-px transition-all duration-500 ${isFailed ? "bg-destructive" : "bg-primary"}`}
+        style={{ width: `${Math.max(0, currentIdx / (stages.length - 1)) * 100}%` }}
+      />
+      {stages.map((stage, i) => {
+        const Icon = stage.icon;
+        const isCompleted = currentIdx >= i;
+        const isCurrent = currentIdx === i;
+        const isFailedStage = isFailed && isCurrent;
+        return (
+          <div key={stage.key} className="relative flex flex-col items-center z-10" style={{ width: `${100 / stages.length}%` }}>
+            <div
+              className={`w-10 h-10 flex items-center justify-center border-2 transition-colors ${
+                isFailedStage
+                  ? "bg-destructive border-destructive text-destructive-foreground"
+                  : isCompleted
+                  ? "bg-primary border-primary text-primary-foreground"
+                  : "bg-background border-border text-muted-foreground"
+              } ${isCurrent && !isFailedStage ? "ring-2 ring-primary/30 ring-offset-2 ring-offset-background" : ""}`}
+            >
+              {isFailedStage ? <XCircle className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
+            </div>
+            <span className={`mt-2 text-[10px] sm:text-xs font-body uppercase tracking-wider text-center ${
+              isFailedStage ? "text-destructive font-medium" : isCompleted ? "text-foreground font-medium" : "text-muted-foreground"
+            }`}>
+              {stage.label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 export default function OrderDetail() {
@@ -70,6 +146,8 @@ export default function OrderDetail() {
   const [order, setOrder] = useState<OrderData | null>(null);
   const [items, setItems] = useState<OrderItem[]>([]);
   const [shipment, setShipment] = useState<Shipment | null>(null);
+  const [returnData, setReturnData] = useState<ReturnData | null>(null);
+  const [refundData, setRefundData] = useState<RefundData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -79,10 +157,14 @@ export default function OrderDetail() {
       supabase.from("orders").select("*").eq("id", id).eq("user_id", user.id).single(),
       supabase.from("order_items").select("id, product_name, variant_label, quantity, price").eq("order_id", id),
       supabase.from("shipments").select("*").eq("order_id", id).order("created_at", { ascending: false }).limit(1),
-    ]).then(([orderRes, itemsRes, shipRes]) => {
+      supabase.from("returns").select("id, status, reason, created_at, admin_notes").eq("order_id", id).order("created_at", { ascending: false }).limit(1),
+      supabase.from("refunds").select("id, status, amount, reason, created_at").eq("order_id", id).order("created_at", { ascending: false }).limit(1),
+    ]).then(([orderRes, itemsRes, shipRes, returnRes, refundRes]) => {
       setOrder(orderRes.data as OrderData | null);
       setItems((itemsRes.data as OrderItem[]) || []);
       setShipment((shipRes.data as Shipment[])?.[0] || null);
+      setReturnData((returnRes.data as ReturnData[])?.[0] || null);
+      setRefundData((refundRes.data as RefundData[])?.[0] || null);
       setLoading(false);
     });
   }, [user, id]);
@@ -121,8 +203,11 @@ export default function OrderDetail() {
     );
   }
 
-  const isTerminal = !!TERMINAL_STATUSES[order.status];
-  const currentStageIdx = getStageIndex(order.status);
+  const isReturnFlow = ["return_requested", "return_approved", "returned"].includes(order.status);
+  const isCancelled = order.status === "cancelled";
+  const isRefundedOnly = order.status === "refunded" && !returnData;
+  const showDeliveryTimeline = !isCancelled && !isReturnFlow && !isRefundedOnly;
+  const currentStageIdx = getIdx(STAGES, order.status);
 
   return (
     <div className="min-h-screen pt-16">
@@ -138,45 +223,69 @@ export default function OrderDetail() {
               Placed on {new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
             </p>
           </div>
-          {isTerminal && (
+          {isCancelled && (
             <span className="mt-4 sm:mt-0 inline-flex items-center gap-2 px-4 py-2 text-sm font-body uppercase tracking-wider bg-destructive/10 text-destructive">
-              {(() => { const T = TERMINAL_STATUSES[order.status]; const Icon = T.icon; return <><Icon className="w-4 h-4" />{T.label}</>; })()}
+              <XCircle className="w-4 h-4" /> Cancelled
             </span>
           )}
         </div>
 
-        {/* Stage Timeline */}
-        {!isTerminal && (
+        {/* ── Delivery Timeline ── */}
+        {showDeliveryTimeline && (
           <div className="mb-12">
-            <div className="relative flex items-start justify-between">
-              {/* Connection line */}
-              <div className="absolute top-5 left-0 right-0 h-px bg-border" />
-              <div
-                className="absolute top-5 left-0 h-px bg-primary transition-all duration-500"
-                style={{ width: `${Math.max(0, currentStageIdx / (STAGES.length - 1)) * 100}%` }}
-              />
+            <h2 className="font-display text-xl mb-4 text-muted-foreground">DELIVERY PROGRESS</h2>
+            <Timeline stages={STAGES} currentStatus={order.status} />
+          </div>
+        )}
 
-              {STAGES.map((stage, i) => {
-                const Icon = stage.icon;
-                const isCompleted = currentStageIdx >= i;
-                const isCurrent = currentStageIdx === i;
-                return (
-                  <div key={stage.key} className="relative flex flex-col items-center z-10" style={{ width: `${100 / STAGES.length}%` }}>
-                    <div
-                      className={`w-10 h-10 flex items-center justify-center border-2 transition-colors ${
-                        isCompleted
-                          ? "bg-primary border-primary text-primary-foreground"
-                          : "bg-background border-border text-muted-foreground"
-                      } ${isCurrent ? "ring-2 ring-primary/30 ring-offset-2 ring-offset-background" : ""}`}
-                    >
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    <span className={`mt-2 text-[10px] sm:text-xs font-body uppercase tracking-wider text-center ${isCompleted ? "text-foreground font-medium" : "text-muted-foreground"}`}>
-                      {stage.label}
-                    </span>
-                  </div>
-                );
-              })}
+        {/* ── Return Timeline ── */}
+        {(returnData || isReturnFlow) && (
+          <div className="mb-12">
+            <h2 className="font-display text-xl mb-4 text-muted-foreground">RETURN PROGRESS</h2>
+            {/* Show the completed delivery timeline first (collapsed) */}
+            <div className="mb-6 opacity-60">
+              <Timeline stages={STAGES} currentStatus="delivered" />
+            </div>
+            <div className="border-l-2 border-border ml-5 pl-6 mb-4">
+              <div className="flex items-center gap-2 text-xs font-body text-muted-foreground uppercase tracking-wider mb-4">
+                <AlertCircle className="w-3.5 h-3.5" /> Return initiated {returnData?.created_at && `on ${new Date(returnData.created_at).toLocaleDateString("en-IN")}`}
+              </div>
+            </div>
+            <Timeline
+              stages={RETURN_STAGES}
+              currentStatus={returnData?.status || "requested"}
+              failedStatus="rejected"
+            />
+            {returnData?.reason && (
+              <p className="mt-4 text-sm font-body text-muted-foreground">
+                <span className="font-medium text-foreground">Reason:</span> {returnData.reason}
+              </p>
+            )}
+            {returnData?.admin_notes && (
+              <p className="mt-1 text-sm font-body text-muted-foreground">
+                <span className="font-medium text-foreground">Note:</span> {returnData.admin_notes}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* ── Refund Timeline ── */}
+        {refundData && (
+          <div className="mb-12">
+            <h2 className="font-display text-xl mb-4 text-muted-foreground">REFUND PROGRESS</h2>
+            <Timeline
+              stages={REFUND_STAGES}
+              currentStatus={refundData.status}
+              failedStatus="failed"
+            />
+            <div className="mt-4 font-body text-sm space-y-1">
+              <p><span className="text-muted-foreground">Refund Amount:</span> <span className="font-medium">₹{(refundData.amount / 100).toFixed(0)}</span></p>
+              {refundData.reason && <p><span className="text-muted-foreground">Reason:</span> {refundData.reason}</p>}
+              <p className="text-xs text-muted-foreground">
+                {refundData.status === "completed"
+                  ? "Amount has been credited to your original payment method."
+                  : "Amount will be credited to your original payment method within 5–7 business days."}
+              </p>
             </div>
           </div>
         )}
