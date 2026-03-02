@@ -19,59 +19,89 @@ const Index = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Hero — full-bleed editorial */}
-      <section className="relative h-screen w-full overflow-hidden">
+      {/* Hero — designer editorial */}
+      <section className="relative h-screen w-full overflow-hidden bg-black">
         <img
           src={heroImage}
           alt="Second Chance — everyone deserves one"
-          className="absolute inset-0 w-full h-full object-cover object-top"
+          className="absolute inset-0 w-full h-full object-cover object-center opacity-60"
         />
-        {/* Cinematic gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent" />
 
-        {/* Content pinned bottom-left, editorial style */}
-        <div className="relative z-10 flex flex-col justify-end h-full px-8 md:px-16 lg:px-24 pb-16 md:pb-24">
+        {/* Layered gradients for depth */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/10 to-transparent" />
+
+        {/* Top bar — minimal nav-style branding */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1.5, delay: 0.3 }}
+          className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-8 md:px-16 lg:px-24 pt-24 md:pt-28"
+        >
+          <p className="text-white/30 text-[10px] md:text-xs uppercase tracking-[0.5em] font-body">
+            Est. 2025
+          </p>
+          <p className="text-white/30 text-[10px] md:text-xs uppercase tracking-[0.5em] font-body">
+            Drop 001
+          </p>
+        </motion.div>
+
+        {/* Center-stage typography — massive, confident */}
+        <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-6">
           <motion.div
-            initial={{ opacity: 0, y: 50 }}
+            initial={{ opacity: 0, y: 60 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-            className="max-w-2xl"
+            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
           >
-            <p className="text-white/50 text-xs md:text-sm uppercase tracking-[0.3em] font-body mb-4">
-              Drop 001 — Limited Edition
-            </p>
-            <h1 className="font-display text-[clamp(3rem,10vw,9rem)] leading-[0.9] text-white">
-              SECOND<br />CHANCE
+            <h1 className="font-display text-[clamp(4rem,15vw,14rem)] leading-[0.85] text-white tracking-tight">
+              SECOND
             </h1>
-            <p className="mt-6 text-white/60 text-base md:text-lg font-body max-w-md leading-relaxed">
-              Everyone deserves one — whether they know it or not.
-            </p>
-            <div className="flex items-center gap-6 mt-10">
-              <Link
-                to="/shop"
-                className="group inline-flex items-center gap-3 bg-white text-black px-8 py-4 text-sm font-medium uppercase tracking-[0.2em] font-body hover:bg-white/90 transition-colors"
-              >
-                Shop the Drop
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link
-                to="/about"
-                className="text-white/50 text-sm font-body uppercase tracking-widest hover:text-white transition-colors"
-              >
-                Our Story
-              </Link>
-            </div>
+            <h1 className="font-display text-[clamp(4rem,15vw,14rem)] leading-[0.85] text-white tracking-tight -mt-2 md:-mt-4">
+              CHANCE
+            </h1>
+          </motion.div>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 0.8 }}
+            className="text-white/40 text-xs md:text-sm uppercase tracking-[0.4em] font-body mt-8 md:mt-12"
+          >
+            Everyone deserves one
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 1.2 }}
+            className="mt-10 md:mt-14"
+          >
+            <Link
+              to="/shop"
+              className="group relative inline-flex items-center gap-4 border border-white/20 text-white px-10 py-4 text-xs md:text-sm font-body uppercase tracking-[0.3em] hover:bg-white hover:text-black transition-all duration-500"
+            >
+              Explore the Collection
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+            </Link>
           </motion.div>
         </div>
 
-        {/* Subtle scroll indicator */}
+        {/* Bottom accent line */}
         <motion.div
-          className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10"
-          animate={{ y: [0, 8, 0] }}
-          transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+          className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent z-10"
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ duration: 2, delay: 1.5, ease: "easeOut" }}
+        />
+
+        {/* Scroll indicator */}
+        <motion.div
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2"
+          animate={{ y: [0, 6, 0] }}
+          transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
         >
-          <div className="w-[1px] h-8 bg-white/30" />
+          <span className="text-white/20 text-[9px] uppercase tracking-[0.4em] font-body">Scroll</span>
+          <div className="w-[1px] h-6 bg-white/20" />
         </motion.div>
       </section>
 
