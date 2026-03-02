@@ -42,8 +42,11 @@ export default function ForgotPassword() {
           Enter your email and we'll send you a link to reset your password.
         </p>
 
-        {sent ? (
-          <p className="text-success font-body text-sm">Check your email for a password reset link.</p>
+    {sent ? (
+          <div className="space-y-2">
+            <p className="text-success font-body text-sm">Check your email for a password reset link.</p>
+            <p className="text-muted-foreground font-body text-xs">📧 Can't find it? Please check your spam or junk folder and mark emails from secondchancestorre@gmail.com as "Not Spam".</p>
+          </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <input type="email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} required className={inputClass} />

@@ -17,11 +17,15 @@ const refundStatusColors: Record<RefundStatus, string> = {
 
 const allRefundStatuses: RefundStatus[] = ["pending", "processing", "completed", "failed"];
 
+type TabType = "requests" | "processed";
+
 function AdminRefundsContent() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [tab, setTab] = useState<TabType>("requests");
 
-  const { data: refunds, isLoading } = useQuery({
+  // Processed refunds from the refunds table
+  const { data: refunds, isLoading: refundsLoading } = useQuery({
     queryKey: ["admin-refunds"],
     queryFn: async () => {
       const { data } = await supabase
@@ -32,11 +36,26 @@ function AdminRefundsContent() {
     },
   });
 
+  // Refund & replacement requests from support tickets
+  const { data: refundRequests, isLoading: requestsLoading } = useQuery({
+    queryKey: ["admin-refund-requests"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("support_tickets")
+        .select("*, profiles:user_id(full_name, email), ticket_messages(message)")
+        .or("subject.ilike.%Refund Request%,subject.ilike.%Replacement Request%")
+        .order("created_at", { ascending: false });
+      return data || [];
+    },
+  });
+
+  const isLoading = refundsLoading || requestsLoading;
+
   if (isLoading) {
     return <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
   }
 
-  const filtered = (refunds || []).filter((r: any) => {
+  const filteredRefunds = (refunds || []).filter((r: any) => {
     if (statusFilter !== "all" && r.status !== statusFilter) return false;
     if (search) {
       const q = search.toLowerCase();
@@ -51,13 +70,35 @@ function AdminRefundsContent() {
     return true;
   });
 
-  const totalRefunded = filtered.filter((r: any) => r.status === "completed").reduce((s: number, r: any) => s + r.amount, 0);
+  const filteredRequests = (refundRequests || []).filter((t: any) => {
+    if (statusFilter !== "all" && t.status !== statusFilter) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      return (
+        t.subject.toLowerCase().includes(q) ||
+        t.id.toLowerCase().includes(q) ||
+        (t.profiles?.full_name || "").toLowerCase().includes(q) ||
+        (t.profiles?.email || "").toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
+
+  const totalRefunded = (refunds || []).filter((r: any) => r.status === "completed").reduce((s: number, r: any) => s + r.amount, 0);
+
+  const ticketStatusColors: Record<string, string> = {
+    open: "bg-warning/10 text-warning",
+    in_progress: "bg-primary/10 text-primary",
+    waiting_customer: "bg-accent text-accent-foreground",
+    resolved: "bg-success/10 text-success",
+    closed: "bg-muted text-muted-foreground",
+  };
 
   return (
     <div>
-      <h1 className="font-display text-4xl mb-6">REFUNDS</h1>
+      <h1 className="font-display text-4xl mb-6">REFUNDS & REPLACEMENTS</h1>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="border border-border p-4">
           <p className="text-xs text-muted-foreground font-body uppercase tracking-widest">Total Refunded</p>
           <p className="text-2xl font-display mt-1">₹{(totalRefunded / 100).toLocaleString()}</p>
@@ -65,62 +106,152 @@ function AdminRefundsContent() {
         <div className="border border-border p-4">
           <p className="text-xs text-muted-foreground font-body uppercase tracking-widest">Pending Refunds</p>
           <p className="text-2xl font-display mt-1 text-warning">
-            {filtered.filter((r: any) => r.status === "pending" || r.status === "processing").length}
+            {(refunds || []).filter((r: any) => r.status === "pending" || r.status === "processing").length}
           </p>
         </div>
+        <div className="border border-border p-4">
+          <p className="text-xs text-muted-foreground font-body uppercase tracking-widest">Open Requests</p>
+          <p className="text-2xl font-display mt-1 text-warning">
+            {(refundRequests || []).filter((t: any) => t.status === "open" || t.status === "in_progress").length}
+          </p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6">
+        <button onClick={() => { setTab("requests"); setStatusFilter("all"); }}
+          className={`px-5 py-2.5 text-sm font-body font-medium uppercase tracking-wider border transition-all ${
+            tab === "requests" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+          }`}>
+          Requests ({(refundRequests || []).length})
+        </button>
+        <button onClick={() => { setTab("processed"); setStatusFilter("all"); }}
+          className={`px-5 py-2.5 text-sm font-body font-medium uppercase tracking-wider border transition-all ${
+            tab === "processed" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+          }`}>
+          Processed ({(refunds || []).length})
+        </button>
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-6">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search refunds..."
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search..."
             className="w-full border border-border bg-background pl-9 pr-3 py-2 text-sm font-body focus:outline-none focus:border-foreground" />
         </div>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-          className="border border-border bg-background px-3 py-2 text-sm font-body focus:outline-none">
-          <option value="all">All statuses</option>
-          {allRefundStatuses.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+        {tab === "processed" && (
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+            className="border border-border bg-background px-3 py-2 text-sm font-body focus:outline-none">
+            <option value="all">All statuses</option>
+            {allRefundStatuses.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        )}
+        {tab === "requests" && (
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+            className="border border-border bg-background px-3 py-2 text-sm font-body focus:outline-none">
+            <option value="all">All statuses</option>
+            <option value="open">Open</option>
+            <option value="in_progress">In Progress</option>
+            <option value="resolved">Resolved</option>
+            <option value="closed">Closed</option>
+          </select>
+        )}
       </div>
 
-      {filtered.length === 0 ? (
-        <p className="text-muted-foreground font-body">No refunds found.</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm font-body">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Refund ID</th>
-                <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Order</th>
-                <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Customer</th>
-                <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Amount</th>
-                <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Reason</th>
-                <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Status</th>
-                <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((refund: any) => (
-                <tr key={refund.id} className="border-b border-border hover:bg-secondary/50 transition-colors">
-                  <td className="py-3 px-2 font-medium">#{refund.id.slice(0, 8)}</td>
-                  <td className="py-3 px-2">#{refund.order_id.slice(0, 8)}</td>
-                  <td className="py-3 px-2">{refund.orders?.shipping_full_name || refund.orders?.email || "—"}</td>
-                  <td className="py-3 px-2">₹{(refund.amount / 100).toFixed(0)}</td>
-                  <td className="py-3 px-2 text-muted-foreground">{refund.reason || "—"}</td>
-                  <td className="py-3 px-2">
-                    <span className={`inline-block px-2 py-1 text-xs uppercase tracking-wider ${refundStatusColors[refund.status as RefundStatus]}`}>
-                      {refund.status}
-                    </span>
-                  </td>
-                  <td className="py-3 px-2 text-muted-foreground">{new Date(refund.created_at).toLocaleDateString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {tab === "requests" && (
+        <>
+          {filteredRequests.length === 0 ? (
+            <p className="text-muted-foreground font-body">No refund/replacement requests found.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm font-body">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Ticket</th>
+                    <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Type</th>
+                    <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Customer</th>
+                    <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Subject</th>
+                    <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Reason</th>
+                    <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Status</th>
+                    <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRequests.map((ticket: any) => {
+                    const isReplacement = ticket.subject?.toLowerCase().includes("replacement");
+                    const reason = ticket.ticket_messages?.[0]?.message || "—";
+                    return (
+                      <tr key={ticket.id} className="border-b border-border hover:bg-secondary/50 transition-colors">
+                        <td className="py-3 px-2 font-medium">#{ticket.id.slice(0, 8)}</td>
+                        <td className="py-3 px-2">
+                          <span className={`inline-block px-2 py-1 text-xs uppercase tracking-wider ${isReplacement ? "bg-accent text-accent-foreground" : "bg-warning/10 text-warning"}`}>
+                            {isReplacement ? "Replacement" : "Refund"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-2">{ticket.profiles?.full_name || ticket.profiles?.email || "—"}</td>
+                        <td className="py-3 px-2 text-muted-foreground max-w-[200px] truncate">{ticket.subject}</td>
+                        <td className="py-3 px-2 text-muted-foreground max-w-[200px] truncate">{reason}</td>
+                        <td className="py-3 px-2">
+                          <span className={`inline-block px-2 py-1 text-xs uppercase tracking-wider ${ticketStatusColors[ticket.status] || ""}`}>
+                            {ticket.status.replace(/_/g, " ")}
+                          </span>
+                        </td>
+                        <td className="py-3 px-2 text-muted-foreground">{new Date(ticket.created_at).toLocaleDateString()}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground font-body mt-4">
+            {filteredRequests.length} of {(refundRequests || []).length} requests • Manage these in the Support section for full chat view
+          </p>
+        </>
       )}
-      <p className="text-xs text-muted-foreground font-body mt-4">{filtered.length} of {(refunds || []).length} refunds</p>
+
+      {tab === "processed" && (
+        <>
+          {filteredRefunds.length === 0 ? (
+            <p className="text-muted-foreground font-body">No processed refunds found.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm font-body">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Refund ID</th>
+                    <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Order</th>
+                    <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Customer</th>
+                    <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Amount</th>
+                    <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Reason</th>
+                    <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Status</th>
+                    <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRefunds.map((refund: any) => (
+                    <tr key={refund.id} className="border-b border-border hover:bg-secondary/50 transition-colors">
+                      <td className="py-3 px-2 font-medium">#{refund.id.slice(0, 8)}</td>
+                      <td className="py-3 px-2">#{refund.order_id.slice(0, 8)}</td>
+                      <td className="py-3 px-2">{refund.orders?.shipping_full_name || refund.orders?.email || "—"}</td>
+                      <td className="py-3 px-2">₹{(refund.amount / 100).toFixed(0)}</td>
+                      <td className="py-3 px-2 text-muted-foreground">{refund.reason || "—"}</td>
+                      <td className="py-3 px-2">
+                        <span className={`inline-block px-2 py-1 text-xs uppercase tracking-wider ${refundStatusColors[refund.status as RefundStatus]}`}>
+                          {refund.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2 text-muted-foreground">{new Date(refund.created_at).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground font-body mt-4">{filteredRefunds.length} of {(refunds || []).length} refunds</p>
+        </>
+      )}
     </div>
   );
 }

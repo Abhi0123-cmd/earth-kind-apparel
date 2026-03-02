@@ -102,6 +102,9 @@ function AdminSupportContent() {
   return (
     <div>
       <h1 className="font-display text-4xl mb-6">SUPPORT TICKETS</h1>
+      <p className="text-sm text-muted-foreground font-body mb-6">
+        All customer queries, return requests, refund requests, and replacement requests appear here. Select a ticket to view the conversation and reply directly.
+      </p>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-6">
