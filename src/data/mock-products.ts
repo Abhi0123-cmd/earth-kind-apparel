@@ -8,7 +8,7 @@ export const mockProducts: Product[] = [
     slug: "essential-tee",
     description:
       "The Essential Tee is crafted from 100% organic cotton with a relaxed fit that drapes effortlessly. Built to last, designed to feel like a second skin. This is the t-shirt you'll reach for every single day.",
-    price: 999,
+    price: 99900,
     compare_at_price: null,
     category: "T-Shirts",
     images: [productWhite],
