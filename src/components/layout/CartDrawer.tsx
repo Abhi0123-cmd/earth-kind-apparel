@@ -3,6 +3,7 @@ import { X, Plus, Minus, ShoppingBag } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatPrice } from "@/lib/products";
+import productWhite from "@/assets/product-tshirt-white.jpg";
 
 export default function CartDrawer() {
   const { isOpen, closeCart, items, removeItem, updateQuantity, subtotal, totalItems } = useCart();
@@ -55,7 +56,7 @@ export default function CartDrawer() {
                   {items.map((item) => (
                     <div key={item.variant.id} className="flex gap-4">
                       <img
-                        src={item.product.images[0]}
+                        src={item.product.images[0] || productWhite}
                         alt={item.product.name}
                         className="w-24 h-24 object-cover bg-secondary"
                       />

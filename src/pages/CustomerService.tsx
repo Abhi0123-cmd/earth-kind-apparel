@@ -49,13 +49,55 @@ export default function CustomerService() {
     setReplOrderId(""); setReplReason("");
   };
 
+  // Resolve a short order ID (e.g. "52c04823") to a full UUID
+  const resolveOrderId = async (input: string): Promise<string | null> => {
+    const cleaned = input.replace(/^#/, "").trim().toLowerCase();
+    if (!cleaned) return null;
+
+    // If it already looks like a full UUID, return as-is
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleaned)) {
+      return cleaned;
+    }
+
+    // Look up user's orders and match by prefix
+    const { data: orders } = await supabase
+      .from("orders")
+      .select("id")
+      .eq("user_id", user.id);
+
+    if (!orders) return null;
+    const match = orders.find((o) => o.id.toLowerCase().startsWith(cleaned));
+    return match?.id || null;
+  };
+
+  const successMessage = (type: string) => {
+    const messages: Record<string, string> = {
+      query: "Your query has been submitted successfully.",
+      return: "Your return request has been submitted successfully.",
+      refund: "Your refund request has been submitted successfully.",
+      replacement: "Your replacement request has been submitted successfully.",
+    };
+    return `${messages[type] || "Request submitted."}\n\n⏱ Estimated response time: 24–48 hours.\n📧 You'll receive a response via email. Please check your spam/junk folder if you don't see it in your inbox.`;
+  };
+
   const handleQuery = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true); setError(""); setSuccess("");
+
+    let resolvedOrderId: string | null = null;
+    if (queryOrderId) {
+      resolvedOrderId = await resolveOrderId(queryOrderId);
+      if (!resolvedOrderId) {
+        setError("Order not found. Please enter a valid Order ID from your Orders page.");
+        setLoading(false);
+        return;
+      }
+    }
+
     const { data: ticket, error: ticketErr } = await supabase.from("support_tickets").insert({
       user_id: user.id,
       subject: querySubject,
-      order_id: queryOrderId || null,
+      order_id: resolvedOrderId,
     }).select().single();
     if (ticketErr) { setError(ticketErr.message); setLoading(false); return; }
     if (queryMessage && ticket) {
@@ -65,7 +107,7 @@ export default function CustomerService() {
         message: queryMessage,
       });
     }
-    setSuccess("Your query has been submitted. We'll get back to you soon!");
+    setSuccess(successMessage("query"));
     resetForms();
     setLoading(false);
   };
@@ -73,13 +115,21 @@ export default function CustomerService() {
   const handleReturn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true); setError(""); setSuccess("");
+
+    const resolvedOrderId = await resolveOrderId(returnOrderId);
+    if (!resolvedOrderId) {
+      setError("Order not found. Please enter a valid Order ID from your Orders page.");
+      setLoading(false);
+      return;
+    }
+
     const { error: err } = await supabase.from("returns").insert({
       user_id: user.id,
-      order_id: returnOrderId,
+      order_id: resolvedOrderId,
       reason: returnReason,
     });
     if (err) { setError(err.message); setLoading(false); return; }
-    setSuccess("Return request submitted successfully. We'll review it shortly.");
+    setSuccess(successMessage("return"));
     resetForms();
     setLoading(false);
   };
@@ -87,14 +137,40 @@ export default function CustomerService() {
   const handleRefund = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true); setError(""); setSuccess("");
-    // Create a support ticket for refund
+
+    const resolvedOrderId = await resolveOrderId(refundOrderId);
+    if (!resolvedOrderId) {
+      setError("Order not found. Please enter a valid Order ID from your Orders page.");
+      setLoading(false);
+      return;
+    }
+
     const { error: err } = await supabase.from("support_tickets").insert({
       user_id: user.id,
-      subject: `Refund Request — Order: ${refundOrderId}`,
-      order_id: refundOrderId || null,
+      subject: `Refund Request — Order: #${resolvedOrderId.slice(0, 8).toUpperCase()}`,
+      order_id: resolvedOrderId,
     });
     if (err) { setError(err.message); setLoading(false); return; }
-    setSuccess("Refund request submitted. Our team will process it within 5-7 business days.");
+
+    // Also add the reason as a ticket message
+    if (refundReason) {
+      const { data: tickets } = await supabase
+        .from("support_tickets")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("order_id", resolvedOrderId)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (tickets?.[0]) {
+        await supabase.from("ticket_messages").insert({
+          ticket_id: tickets[0].id,
+          sender_id: user.id,
+          message: `Refund reason: ${refundReason}`,
+        });
+      }
+    }
+
+    setSuccess(successMessage("refund"));
     resetForms();
     setLoading(false);
   };
@@ -102,13 +178,39 @@ export default function CustomerService() {
   const handleReplacement = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true); setError(""); setSuccess("");
+
+    const resolvedOrderId = await resolveOrderId(replOrderId);
+    if (!resolvedOrderId) {
+      setError("Order not found. Please enter a valid Order ID from your Orders page.");
+      setLoading(false);
+      return;
+    }
+
     const { error: err } = await supabase.from("support_tickets").insert({
       user_id: user.id,
-      subject: `Replacement Request — Order: ${replOrderId}`,
-      order_id: replOrderId || null,
+      subject: `Replacement Request — Order: #${resolvedOrderId.slice(0, 8).toUpperCase()}`,
+      order_id: resolvedOrderId,
     });
     if (err) { setError(err.message); setLoading(false); return; }
-    setSuccess("Replacement request submitted. We'll arrange a replacement after reviewing your request.");
+
+    if (replReason) {
+      const { data: tickets } = await supabase
+        .from("support_tickets")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("order_id", resolvedOrderId)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (tickets?.[0]) {
+        await supabase.from("ticket_messages").insert({
+          ticket_id: tickets[0].id,
+          sender_id: user.id,
+          message: `Replacement reason: ${replReason}`,
+        });
+      }
+    }
+
+    setSuccess(successMessage("replacement"));
     resetForms();
     setLoading(false);
   };
@@ -149,7 +251,17 @@ export default function CustomerService() {
         </div>
 
         {error && <p className="text-destructive text-sm font-body mb-4">{error}</p>}
-        {success && <p className="text-success text-sm font-body mb-4 p-4 border border-success/30 bg-success/5">{success}</p>}
+        {success && (
+          <div className="text-sm font-body mb-4 p-4 border border-success/30 bg-success/5">
+            {success.split("\n").map((line, i) => (
+              <p key={i} className={i === 0 ? "text-success font-medium" : "text-muted-foreground mt-1"}>{line}</p>
+            ))}
+          </div>
+        )}
+
+        <p className="text-xs text-muted-foreground font-body mb-4">
+          Enter the Order ID shown on your <Link to="/orders" className="underline hover:text-foreground">Orders page</Link> (e.g. #52C04823).
+        </p>
 
         {activeTab === "query" && (
           <form onSubmit={handleQuery} className="space-y-4">
@@ -165,7 +277,7 @@ export default function CustomerService() {
         {activeTab === "return" && (
           <form onSubmit={handleReturn} className="space-y-4">
             <p className="text-muted-foreground font-body text-sm mb-2">Initiate a return for an order within 15 days of delivery.</p>
-            <input type="text" placeholder="Order ID" value={returnOrderId} onChange={(e) => setReturnOrderId(e.target.value)} required className={inputClass} />
+            <input type="text" placeholder="Order ID (e.g. 52C04823)" value={returnOrderId} onChange={(e) => setReturnOrderId(e.target.value)} required className={inputClass} />
             <textarea placeholder="Reason for return..." value={returnReason} onChange={(e) => setReturnReason(e.target.value)} required rows={4} className={inputClass} />
             <button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground py-4 text-sm font-medium uppercase tracking-widest font-body hover:opacity-90 transition-opacity disabled:opacity-50">
               {loading ? "Submitting..." : "Submit Return Request"}
@@ -176,7 +288,7 @@ export default function CustomerService() {
         {activeTab === "refund" && (
           <form onSubmit={handleRefund} className="space-y-4">
             <p className="text-muted-foreground font-body text-sm mb-2">Request a refund for a processed order.</p>
-            <input type="text" placeholder="Order ID" value={refundOrderId} onChange={(e) => setRefundOrderId(e.target.value)} required className={inputClass} />
+            <input type="text" placeholder="Order ID (e.g. 52C04823)" value={refundOrderId} onChange={(e) => setRefundOrderId(e.target.value)} required className={inputClass} />
             <textarea placeholder="Reason for refund..." value={refundReason} onChange={(e) => setRefundReason(e.target.value)} required rows={4} className={inputClass} />
             <button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground py-4 text-sm font-medium uppercase tracking-widest font-body hover:opacity-90 transition-opacity disabled:opacity-50">
               {loading ? "Submitting..." : "Submit Refund Request"}
@@ -187,7 +299,7 @@ export default function CustomerService() {
         {activeTab === "replacement" && (
           <form onSubmit={handleReplacement} className="space-y-4">
             <p className="text-muted-foreground font-body text-sm mb-2">Request a replacement for a defective or incorrect item.</p>
-            <input type="text" placeholder="Order ID" value={replOrderId} onChange={(e) => setReplOrderId(e.target.value)} required className={inputClass} />
+            <input type="text" placeholder="Order ID (e.g. 52C04823)" value={replOrderId} onChange={(e) => setReplOrderId(e.target.value)} required className={inputClass} />
             <textarea placeholder="Describe the issue..." value={replReason} onChange={(e) => setReplReason(e.target.value)} required rows={4} className={inputClass} />
             <button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground py-4 text-sm font-medium uppercase tracking-widest font-body hover:opacity-90 transition-opacity disabled:opacity-50">
               {loading ? "Submitting..." : "Submit Replacement Request"}

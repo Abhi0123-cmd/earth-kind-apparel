@@ -9,6 +9,9 @@ const corsHeaders = {
 const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 const SENDER_EMAIL = "secondchancestorre@gmail.com";
 const SENDER_NAME = "Second Chance";
+const SITE_URL = "https://www.seconddchance.com";
+const SUPPORT_EMAIL = "secondchancestorre@gmail.com";
+const SUPPORT_PHONE = "+91 80560 66050";
 
 interface EmailAttachment {
   name: string;
@@ -27,23 +30,32 @@ interface EmailRequest {
 function buildHtml(template: string, data: Record<string, unknown>): string {
   const headerStyle = `style="background:#000;color:#fff;padding:32px 24px;text-align:center;font-family:'Helvetica Neue',Arial,sans-serif"`;
   const bodyStyle = `style="padding:24px;font-family:'Helvetica Neue',Arial,sans-serif;color:#1a1a1a;line-height:1.6"`;
-  const footerStyle = `style="padding:24px;text-align:center;font-size:12px;color:#888;font-family:'Helvetica Neue',Arial,sans-serif"`;
+  const footerStyle = `style="padding:24px;text-align:center;font-size:12px;color:#888;font-family:'Helvetica Neue',Arial,sans-serif;border-top:1px solid #eee;margin-top:24px"`;
   const btnStyle = `style="display:inline-block;background:#000;color:#fff;padding:12px 32px;text-decoration:none;font-size:13px;letter-spacing:2px;text-transform:uppercase;margin:16px 0"`;
+  const spamNote = `<p style="background:#f9f9f9;padding:12px 16px;border-left:3px solid #000;margin:20px 0;font-size:13px;color:#555">📧 <strong>Can't find our emails?</strong> Please check your spam or junk folder and mark emails from ${SUPPORT_EMAIL} as "Not Spam" to ensure you receive all updates.</p>`;
 
   const header = `<div ${headerStyle}><h1 style="margin:0;font-size:20px;letter-spacing:4px">SECOND CHANCE</h1></div>`;
-  const footer = `<div ${footerStyle}><p>Thank you for choosing Second Chance.</p><p style="margin-top:8px">© ${new Date().getFullYear()} Second Chance. All rights reserved.</p></div>`;
+  const footer = `<div ${footerStyle}>
+    <p>Thank you for choosing Second Chance.</p>
+    <p style="margin-top:12px">For any order-related queries, please reach out to us:</p>
+    <p style="margin:4px 0"><strong>Email:</strong> <a href="mailto:${SUPPORT_EMAIL}" style="color:#000">${SUPPORT_EMAIL}</a></p>
+    <p style="margin:4px 0"><strong>Phone:</strong> <a href="tel:${SUPPORT_PHONE.replace(/\s/g, '')}" style="color:#000">${SUPPORT_PHONE}</a></p>
+    <p style="margin-top:16px;color:#aaa">© ${new Date().getFullYear()} Second Chance. All rights reserved.</p>
+  </div>`;
 
   let content = "";
 
   switch (template) {
     case "order_confirmation": {
       const { order_id, total, items_summary } = data;
+      const formattedTotal = typeof total === "number" ? `₹${Math.round(total / 100)}` : `₹${total}`;
       content = `
         <h2 style="font-size:18px;letter-spacing:2px">ORDER CONFIRMED</h2>
         <p>Your order <strong>#${(order_id as string).slice(0, 8).toUpperCase()}</strong> has been placed successfully.</p>
         ${items_summary ? `<div style="background:#f5f5f5;padding:16px;margin:16px 0">${items_summary}</div>` : ""}
-        <p><strong>Total: ₹${total}</strong></p>
+        <p><strong>Total: ${formattedTotal}</strong></p>
         <p>We'll notify you once your order is shipped.</p>
+        ${spamNote}
       `;
       break;
     }
@@ -54,7 +66,8 @@ function buildHtml(template: string, data: Record<string, unknown>): string {
         <p>Great news! Your order <strong>#${(oid as string).slice(0, 8).toUpperCase()}</strong> is on its way.</p>
         ${carrier ? `<p>Carrier: <strong>${carrier}</strong></p>` : ""}
         ${tracking_number ? `<p>Tracking Number: <strong>${tracking_number}</strong></p>` : ""}
-        <a href="https://earth-kind-apparel.lovable.app/orders" ${btnStyle}>TRACK ORDER</a>
+        <a href="${SITE_URL}/orders" ${btnStyle}>TRACK ORDER</a>
+        ${spamNote}
       `;
       break;
     }
@@ -64,7 +77,8 @@ function buildHtml(template: string, data: Record<string, unknown>): string {
         <h2 style="font-size:18px;letter-spacing:2px">ORDER DELIVERED</h2>
         <p>Your order <strong>#${(did as string).slice(0, 8).toUpperCase()}</strong> has been delivered.</p>
         <p>We hope you love your purchase! If you have any concerns, don't hesitate to reach out.</p>
-        <a href="https://earth-kind-apparel.lovable.app/orders" ${btnStyle}>VIEW ORDER</a>
+        <a href="${SITE_URL}/orders" ${btnStyle}>VIEW ORDER</a>
+        ${spamNote}
       `;
       break;
     }
@@ -75,6 +89,7 @@ function buildHtml(template: string, data: Record<string, unknown>): string {
         <p>A refund of <strong>₹${amount}</strong> has been initiated for order <strong>#${(rid as string).slice(0, 8).toUpperCase()}</strong>.</p>
         ${reason ? `<p>Reason: ${reason}</p>` : ""}
         <p>The amount will be credited to your original payment method within 5-7 business days.</p>
+        ${spamNote}
       `;
       break;
     }
@@ -84,7 +99,8 @@ function buildHtml(template: string, data: Record<string, unknown>): string {
         <h2 style="font-size:18px;letter-spacing:2px">RETURN UPDATE</h2>
         <p>Your return for order <strong>#${(retid as string).slice(0, 8).toUpperCase()}</strong> has been updated.</p>
         <p>Current status: <strong>${(status as string).replace(/_/g, " ").toUpperCase()}</strong></p>
-        <a href="https://earth-kind-apparel.lovable.app/orders" ${btnStyle}>VIEW DETAILS</a>
+        <a href="${SITE_URL}/orders" ${btnStyle}>VIEW DETAILS</a>
+        ${spamNote}
       `;
       break;
     }
@@ -94,7 +110,8 @@ function buildHtml(template: string, data: Record<string, unknown>): string {
         <h2 style="font-size:18px;letter-spacing:2px">YOUR INVOICE</h2>
         <p>Please find attached the invoice for your order <strong>#${(iid as string).slice(0, 8).toUpperCase()}</strong>.</p>
         <p>If you have any questions about this invoice, feel free to reach out to us.</p>
-        <a href="https://earth-kind-apparel.lovable.app/orders" ${btnStyle}>VIEW ORDER</a>
+        <a href="${SITE_URL}/orders" ${btnStyle}>VIEW ORDER</a>
+        ${spamNote}
       `;
       break;
     }

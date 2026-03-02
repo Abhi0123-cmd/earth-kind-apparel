@@ -15,10 +15,12 @@ export const mockProducts: Product[] = [
     is_active: true,
     created_at: new Date().toISOString(),
     variants: [
-      { id: "v5", product_id: "1", size: "S", color: "White", color_hex: "#F5F5F5", sku: "ESS-WHT-S", stock: 30, is_active: true },
-      { id: "v6", product_id: "1", size: "M", color: "White", color_hex: "#F5F5F5", sku: "ESS-WHT-M", stock: 45, is_active: true },
-      { id: "v7", product_id: "1", size: "L", color: "White", color_hex: "#F5F5F5", sku: "ESS-WHT-L", stock: 38, is_active: true },
-      { id: "v8", product_id: "1", size: "XL", color: "White", color_hex: "#F5F5F5", sku: "ESS-WHT-XL", stock: 22, is_active: true },
+      { id: "v5", product_id: "1", size: "S", color: "White", color_hex: "#F5F5F5", sku: "ESS-WHT-S", stock: 6, is_active: true },
+      { id: "v6", product_id: "1", size: "M", color: "White", color_hex: "#F5F5F5", sku: "ESS-WHT-M", stock: 10, is_active: true },
+      { id: "v7", product_id: "1", size: "L", color: "White", color_hex: "#F5F5F5", sku: "ESS-WHT-L", stock: 12, is_active: true },
+      { id: "v8", product_id: "1", size: "XL", color: "White", color_hex: "#F5F5F5", sku: "ESS-WHT-XL", stock: 10, is_active: true },
+      { id: "v9", product_id: "1", size: "2XL", color: "White", color_hex: "#F5F5F5", sku: "ESS-WHT-2XL", stock: 8, is_active: true },
+      { id: "v10", product_id: "1", size: "3XL", color: "White", color_hex: "#F5F5F5", sku: "ESS-WHT-3XL", stock: 4, is_active: true },
     ],
   },
 ];
