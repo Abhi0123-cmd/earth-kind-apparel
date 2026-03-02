@@ -1,5 +1,5 @@
 import type { Product } from "@/types";
-import productWhite from "@/assets/product-tshirt-white.jpg";
+import productWhite from "@/assets/product-tshirt-white-front.png";
 
 export const mockProducts: Product[] = [
   {
