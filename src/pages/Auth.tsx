@@ -61,16 +61,9 @@ export default function Auth() {
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
 
-  // Clear stale session on mount — local only, no network
+  // Sign out any existing session on mount so sign-in starts fresh
   useEffect(() => {
-    const keysToRemove: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && (key.startsWith("sb-") || key.includes("supabase"))) {
-        keysToRemove.push(key);
-      }
-    }
-    keysToRemove.forEach((k) => localStorage.removeItem(k));
+    supabase.auth.signOut({ scope: "local" }).catch(() => {});
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
