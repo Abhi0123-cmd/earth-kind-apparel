@@ -9,10 +9,13 @@ export default function ResetPassword() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check for recovery token in URL hash
+    // Supabase v2 puts recovery tokens in the URL hash or as query params
     const hash = window.location.hash;
-    if (!hash.includes("type=recovery")) {
-      navigate("/auth");
+    const params = new URLSearchParams(window.location.search);
+    const hasRecovery = hash.includes("type=recovery") || params.get("type") === "recovery";
+    if (!hasRecovery && !hash.includes("access_token")) {
+      // No recovery token found — but don't redirect immediately, 
+      // Supabase may still be processing the token exchange
     }
   }, [navigate]);
 
