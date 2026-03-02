@@ -16,6 +16,13 @@ export default function Auth() {
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
 
+  // Clear any stale session on mount so fresh sign-in works
+  useState(() => {
+    supabase.auth.getSession().then(({ error }) => {
+      if (error) supabase.auth.signOut().catch(() => {});
+    });
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
