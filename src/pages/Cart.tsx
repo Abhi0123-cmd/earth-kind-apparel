@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { formatPrice } from "@/data/mock-products";
 import { Minus, Plus, X, ArrowLeft } from "lucide-react";
+import productWhite from "@/assets/product-tshirt-white.jpg";
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, subtotal } = useCart();
@@ -35,7 +36,7 @@ export default function CartPage() {
           {items.map((item) => (
             <div key={item.variant.id} className="flex gap-6 pb-8 border-b border-border">
               <img
-                src={item.product.images[0]}
+                src={item.product.images[0] || productWhite}
                 alt={item.product.name}
                 className="w-32 h-32 object-cover bg-secondary"
               />

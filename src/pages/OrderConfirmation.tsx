@@ -16,8 +16,11 @@ export default function OrderConfirmation() {
         <p className="text-muted-foreground font-body text-lg mb-2">
           Thank you for shopping with Second Chance.
         </p>
-        <p className="text-muted-foreground font-body text-sm mb-8">
-          You'll receive a confirmation email and WhatsApp message with your order details and tracking information shortly.
+        <p className="text-muted-foreground font-body text-sm mb-4">
+          You'll receive a confirmation email with your order details and tracking information shortly.
+        </p>
+        <p className="text-muted-foreground font-body text-xs mb-8">
+          Can't find the email? Please check your spam or junk folder.
         </p>
         <Link
           to="/shop"

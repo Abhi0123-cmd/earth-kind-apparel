@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchProducts, formatPrice } from "@/lib/products";
 import { mockProducts, formatPrice as mockFormatPrice } from "@/data/mock-products";
 import { Loader2 } from "lucide-react";
+import productWhite from "@/assets/product-tshirt-white.jpg";
 
 export default function Shop() {
   const { data: products, isLoading } = useQuery({
@@ -33,7 +34,7 @@ export default function Shop() {
                 <Link to={`/product/${product.slug}`} className="group block">
                   <div className="aspect-square overflow-hidden bg-secondary mb-4">
                     <img
-                      src={product.images[0] || "/placeholder.svg"}
+                      src={product.images[0] || productWhite}
                       alt={product.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
