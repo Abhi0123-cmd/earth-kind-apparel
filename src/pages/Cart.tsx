@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
-import { formatPrice } from "@/data/mock-products";
+import { formatPrice } from "@/lib/products";
 import { Minus, Plus, X, ArrowLeft } from "lucide-react";
 import productWhite from "@/assets/product-tshirt-white.jpg";
 

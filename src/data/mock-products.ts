@@ -29,6 +29,6 @@ export function getProduct(slug: string) {
   return mockProducts.find((p) => p.slug === slug);
 }
 
-export function formatPrice(amount: number) {
-  return `₹${amount.toLocaleString("en-IN")}`;
+export function formatPrice(paise: number) {
+  return `₹${(paise / 100).toFixed(0)}`;
 }
