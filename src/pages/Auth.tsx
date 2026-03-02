@@ -61,10 +61,8 @@ export default function Auth() {
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
 
-  // Sign out any existing session on mount so sign-in starts fresh
-  useEffect(() => {
-    supabase.auth.signOut({ scope: "local" }).catch(() => {});
-  }, []);
+  // No signOut on mount — it triggers a network call that fails if
+  // Supabase is briefly unreachable, causing "Unable to reach server".
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -13,7 +13,7 @@ export default function VerifyEmail() {
         </div>
         <h1 className="font-display text-4xl md:text-5xl mb-4">VERIFY EMAIL</h1>
         <p className="text-muted-foreground font-body text-sm leading-relaxed mb-8">
-          Please go to your email: <span className="text-foreground font-medium">{email}</span> and click on the verification link to complete your registration.
+          We've sent a verification link to <span className="text-foreground font-medium">{email}</span>. Please check your inbox and click the link to complete your registration.
         </p>
         <Link
           to="/auth"

@@ -20,7 +20,14 @@ export default function ForgotPassword() {
     });
 
     if (error) {
-      setError(error.message);
+      const msg = error.message?.toLowerCase() ?? "";
+      if (msg.includes("failed to fetch") || msg.includes("network") || msg.includes("fetch")) {
+        setError("Unable to reach the server. Please check your connection and try again.");
+      } else if (msg.includes("rate limit") || msg.includes("too many")) {
+        setError("Too many attempts. Please wait a moment and try again.");
+      } else {
+        setError(error.message);
+      }
     } else {
       setSent(true);
     }

@@ -73,8 +73,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    // Clear any stale tokens before attempting sign-in
-    clearLocalAuth();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error };
   };
