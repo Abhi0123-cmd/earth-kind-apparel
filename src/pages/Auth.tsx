@@ -1,8 +1,53 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff } from "lucide-react";
+import type { AuthError } from "@supabase/supabase-js";
+
+/** Map Supabase auth error codes/messages to user-friendly text */
+function friendlyError(err: AuthError): string {
+  const msg = err.message?.toLowerCase() ?? "";
+  const status = (err as any).status as number | undefined;
+
+  // Rate limiting
+  if (status === 429 || msg.includes("rate limit") || msg.includes("too many requests")) {
+    return "Too many attempts. Please wait a moment and try again.";
+  }
+
+  // Invalid credentials
+  if (msg.includes("invalid login credentials") || msg.includes("invalid_credentials")) {
+    return "Incorrect email or password.";
+  }
+
+  // Email not confirmed
+  if (msg.includes("email not confirmed")) {
+    return "Your email hasn't been verified yet. Please check your inbox.";
+  }
+
+  // User not found
+  if (msg.includes("user not found")) {
+    return "No account found with this email.";
+  }
+
+  // Signup: user already exists
+  if (msg.includes("user already registered") || msg.includes("already been registered")) {
+    return "An account with this email already exists. Please sign in instead.";
+  }
+
+  // Weak password
+  if (msg.includes("password") && (msg.includes("weak") || msg.includes("short") || msg.includes("at least"))) {
+    return "Password is too weak. Use at least 6 characters.";
+  }
+
+  // Network / fetch failures
+  if (msg.includes("failed to fetch") || msg.includes("network") || msg.includes("fetch")) {
+    return "Unable to reach the server. Please check your connection and try again.";
+  }
+
+  // Fallback
+  return err.message || "Something went wrong. Please try again.";
+}
 
 export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -16,12 +61,17 @@ export default function Auth() {
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
 
-  // Clear any stale session on mount so fresh sign-in works
-  useState(() => {
-    supabase.auth.getSession().then(({ error }) => {
-      if (error) supabase.auth.signOut().catch(() => {});
-    });
-  });
+  // Clear stale session on mount — local only, no network
+  useEffect(() => {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith("sb-") || key.includes("supabase"))) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,14 +82,14 @@ export default function Auth() {
     if (isSignUp) {
       const { error } = await signUp(email, password, fullName);
       if (error) {
-        setError(error.message);
+        setError(friendlyError(error as AuthError));
       } else {
         navigate("/verify-email", { state: { email } });
       }
     } else {
       const { error } = await signIn(email, password);
       if (error) {
-        setError(error.message);
+        setError(friendlyError(error));
       } else {
         const { data: userData } = await supabase.auth.getUser();
         const userId = userData.user?.id;

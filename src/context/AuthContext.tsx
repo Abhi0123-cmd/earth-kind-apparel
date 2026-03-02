@@ -1,19 +1,30 @@
 import { useState, useEffect, createContext, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getPublicAppUrl } from "@/lib/auth-urls";
-import type { User, Session } from "@supabase/supabase-js";
+import type { User, Session, AuthError } from "@supabase/supabase-js";
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/** Wipe auth keys from localStorage without any network call */
+function clearLocalAuth() {
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && (key.startsWith("sb-") || key.includes("supabase"))) {
+      keysToRemove.push(key);
+    }
+  }
+  keysToRemove.forEach((k) => localStorage.removeItem(k));
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -23,8 +34,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'TOKEN_REFRESHED' && !session) {
-        // Token refresh failed — clear stale session
-        supabase.auth.signOut().catch(() => {});
+        // Token refresh failed — clear locally (no network)
+        clearLocalAuth();
       }
       setSession(session);
       setUser(session?.user ?? null);
@@ -33,9 +44,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
-        // Stale/corrupt session — clear it
         console.warn("Clearing stale auth session:", error.message);
-        supabase.auth.signOut().catch(() => {});
+        // Use local scope to avoid network call that would also fail
+        clearLocalAuth();
         setSession(null);
         setUser(null);
         setLoading(false);
@@ -62,12 +73,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
+    // Clear any stale tokens before attempting sign-in
+    clearLocalAuth();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error as Error | null };
+    return { error };
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    // Use local scope so sign-out never fails due to network
+    await supabase.auth.signOut({ scope: "local" });
+    clearLocalAuth();
   };
 
   return (
