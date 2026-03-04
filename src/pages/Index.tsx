@@ -3,11 +3,13 @@ import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { fetchProducts, formatPrice } from "@/lib/products";
 import { mockProducts, formatPrice as mockFormatPrice } from "@/data/mock-products";
-import heroImage from "@/assets/hero-image.jpg";
 import productWhite from "@/assets/product-tshirt-white.jpg";
 import { ArrowRight } from "lucide-react";
+import { usePreOrderMode } from "@/hooks/usePreOrderMode";
 
 const Index = () => {
+  const isPreOrder = usePreOrderMode();
+
   const { data: products } = useQuery({
     queryKey: ["products"],
     queryFn: fetchProducts
@@ -19,34 +21,31 @@ const Index = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Hero — designer editorial */}
+      {/* Hero — pure black, premium typography */}
       <section className="relative h-screen w-full overflow-hidden bg-black">
-        <img
-          src={heroImage}
-          alt="Second Chance — everyone deserves one"
-          className="absolute inset-0 w-full h-full object-cover object-center opacity-60"
-        />
+        {/* Subtle noise texture overlay */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\' opacity=\'1\'/%3E%3C/svg%3E")', backgroundSize: '128px 128px' }} />
 
-        {/* Layered gradients for depth */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/10 to-transparent" />
+        {/* Minimal accent lines */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1px] h-32 bg-gradient-to-b from-transparent via-white/10 to-transparent" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[1px] h-32 bg-gradient-to-t from-transparent via-white/10 to-transparent" />
 
-        {/* Top bar — minimal nav-style branding */}
+        {/* Top bar */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1.5, delay: 0.3 }}
           className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-8 md:px-16 lg:px-24 pt-24 md:pt-28"
         >
-          <p className="text-white/30 text-[10px] md:text-xs uppercase tracking-[0.5em] font-body">
+          <p className="text-white/20 text-[10px] md:text-xs uppercase tracking-[0.5em] font-body">
             Est. 2025
           </p>
-          <p className="text-white/30 text-[10px] md:text-xs uppercase tracking-[0.5em] font-body">
-            Drop 001
+          <p className="text-white/20 text-[10px] md:text-xs uppercase tracking-[0.5em] font-body">
+            {isPreOrder ? "Pre-Order Now" : "Drop 001"}
           </p>
         </motion.div>
 
-        {/* Center-stage typography — massive, confident */}
+        {/* Center-stage typography */}
         <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-6">
           <motion.div
             initial={{ opacity: 0, y: 60 }}
@@ -65,10 +64,23 @@ const Index = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1, delay: 0.8 }}
-            className="text-white/40 text-xs md:text-sm uppercase tracking-[0.4em] font-body mt-8 md:mt-12"
+            className="text-white/30 text-xs md:text-sm uppercase tracking-[0.4em] font-body mt-8 md:mt-12"
           >
             Everyone deserves one
           </motion.p>
+
+          {isPreOrder && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.8, delay: 1 }}
+              className="mt-4"
+            >
+              <span className="inline-block border border-white/20 text-white/50 px-4 py-1.5 text-[10px] uppercase tracking-[0.4em] font-body">
+                Pre-Order Open
+              </span>
+            </motion.div>
+          )}
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -80,7 +92,7 @@ const Index = () => {
               to="/shop"
               className="group relative inline-flex items-center gap-4 border border-white/20 text-white px-10 py-4 text-xs md:text-sm font-body uppercase tracking-[0.3em] hover:bg-white hover:text-black transition-all duration-500"
             >
-              Explore the Collection
+              {isPreOrder ? "Pre-Order Now" : "Explore the Collection"}
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
             </Link>
           </motion.div>
@@ -88,7 +100,7 @@ const Index = () => {
 
         {/* Bottom accent line */}
         <motion.div
-          className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent z-10"
+          className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent z-10"
           initial={{ scaleX: 0 }}
           animate={{ scaleX: 1 }}
           transition={{ duration: 2, delay: 1.5, ease: "easeOut" }}
@@ -100,12 +112,12 @@ const Index = () => {
           animate={{ y: [0, 6, 0] }}
           transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
         >
-          <span className="text-white/20 text-[9px] uppercase tracking-[0.4em] font-body">Scroll</span>
-          <div className="w-[1px] h-6 bg-white/20" />
+          <span className="text-white/15 text-[9px] uppercase tracking-[0.4em] font-body">Scroll</span>
+          <div className="w-[1px] h-6 bg-white/15" />
         </motion.div>
       </section>
 
-      {/* Featured Product — asymmetric editorial layout */}
+      {/* Featured Product */}
       {featured && (
         <section className="py-24 md:py-32 px-8 md:px-16 lg:px-24">
           <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-center">
@@ -132,7 +144,7 @@ const Index = () => {
               transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
             >
               <p className="text-xs text-muted-foreground uppercase tracking-[0.3em] font-body mb-3">
-                Featured
+                {isPreOrder ? "Pre-Order" : "Featured"}
               </p>
               <h2 className="font-display text-5xl md:text-7xl mb-4">{featured.name}</h2>
               <p className="text-muted-foreground font-body text-base leading-relaxed mb-8 max-w-sm">
@@ -150,7 +162,7 @@ const Index = () => {
                 to={`/product/${featured.slug}`}
                 className="group inline-flex items-center gap-3 bg-primary text-primary-foreground px-10 py-4 text-sm font-medium uppercase tracking-[0.2em] font-body hover:opacity-90 transition-opacity"
               >
-                View Product
+                {isPreOrder ? "Pre-Order" : "View Product"}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
             </motion.div>
@@ -158,7 +170,7 @@ const Index = () => {
         </section>
       )}
 
-      {/* Brand manifesto — editorial full-width band */}
+      {/* Brand manifesto */}
       <section className="bg-primary text-primary-foreground py-24 md:py-32 px-8 md:px-16 lg:px-24">
         <div className="max-w-5xl mx-auto text-center">
           <motion.div

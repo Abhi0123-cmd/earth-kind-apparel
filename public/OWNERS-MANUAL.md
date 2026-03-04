@@ -1,8 +1,92 @@
-# Second Chance — Owner's Manual
+# Second Chance — Complete Owner's Manual
 
-> Complete guide to managing, maintaining, and operating your e-commerce website.
+> Full guide for frontend, backend, integrations, pre-order mode, and industry standards.
 
 ---
+
+## Table of Contents
+
+1. [Frontend Guide](#frontend-guide)
+2. [Backend Guide](#backend-guide)
+3. [Pre-Order Mode](#pre-order-mode)
+4. [Integration Deep-Dive](#integration-deep-dive)
+5. [Industry Standards Audit](#industry-standards-audit)
+
+---
+
+## Pre-Order Mode
+
+### How It Works
+
+1. A `site_config` table holds a `pre_order_mode` flag (currently `true`)
+2. When true, all customer-facing text changes: "Add to Bag" → "Pre-Order Now", "Checkout" → "Place Pre-Order", Shop title → "PRE-ORDER"
+3. Orders are created normally — same payment pipeline
+4. To go live: click **"Pre-Order Mode ON"** button in Admin → Orders to switch to **LIVE Mode**
+5. Existing pre-orders remain valid and continue through fulfillment
+6. Reversible — toggle back anytime
+
+### Admin: Delivery Status Control
+
+The Admin → Orders page now has a **Delivery** column with a dropdown for each order. You can manually change shipment status (pending → picked_up → in_transit → out_for_delivery → delivered). This updates the customer's order detail page in real-time.
+
+---
+
+## Integration Deep-Dive
+
+### Razorpay (Payments)
+
+**What**: Processes UPI, cards, net banking, wallets.
+
+**Flow**: Customer pays → Razorpay modal → Client verification → Webhook confirmation → Stock deducted → Shiprocket + Zoho + Brevo triggered.
+
+**Why OTP?** 3D Secure is mandatory per RBI. The OTP is sent by the **card-issuing bank** to the phone registered with that bank. Razorpay has zero control over which number gets it.
+
+**Why webhooks?** The webhook is the source of truth. If a customer's internet drops after paying, the webhook still processes everything.
+
+### Shiprocket (Shipping)
+
+**What**: Aggregates 15+ carriers, auto-picks cheapest/fastest, generates AWB tracking numbers.
+
+**Why Shiprocket?** One integration instead of separate contracts with BlueDart, Delhivery, etc.
+
+**Token**: Auto-refreshes every 10 days via email/password.
+
+### Zoho Books (Invoicing)
+
+**What**: GST-compliant invoices required by Indian tax law.
+
+**Token**: OAuth access tokens expire hourly (auto-refreshed). Refresh tokens last ~90 days.
+
+### Brevo (Email)
+
+**What**: Branded transactional emails for all order lifecycle events.
+
+**Why not Shiprocket's emails?** Shiprocket sends carrier-branded emails. Brevo sends Second Chance-branded emails.
+
+**Why not Gmail?** 500/day limit, no programmatic sending at scale.
+
+---
+
+## Industry Standards Audit
+
+### ✅ Done Right
+- Server-side payment signature verification + webhook as source of truth
+- Webhook idempotency (duplicate detection)
+- Atomic inventory with row-level locking
+- RLS on all tables
+- Admin role in separate table (prevents privilege escalation)
+- Encrypted secrets
+- Email verification required
+- Audit trail for admin actions
+
+### ⚠️ Gaps
+- No rate limiting on auth → configure in auth settings
+- No CAPTCHA on signup → add hCaptcha
+- Google OAuth not configured for custom domain → register in Google Cloud Console
+- Leaked password protection disabled → enable in auth settings
+- Zoho token expires silently after ~90 days → add monitoring
+
+
 
 ## Table of Contents
 

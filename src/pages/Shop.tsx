@@ -4,9 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchProducts, formatPrice } from "@/lib/products";
 import { mockProducts, formatPrice as mockFormatPrice } from "@/data/mock-products";
 import { Loader2 } from "lucide-react";
+import { usePreOrderMode } from "@/hooks/usePreOrderMode";
 import productWhite from "@/assets/product-tshirt-white.jpg";
 
 export default function Shop() {
+  const isPreOrder = usePreOrderMode();
   const { data: products, isLoading } = useQuery({
     queryKey: ["products"],
     queryFn: fetchProducts,
@@ -18,7 +20,8 @@ export default function Shop() {
   return (
     <div className="min-h-screen pt-16">
       <div className="px-6 lg:px-12 py-16 border-b border-border">
-        <h1 className="font-display text-5xl md:text-7xl">ALL PRODUCTS</h1>
+        <h1 className="font-display text-5xl md:text-7xl">{isPreOrder ? "PRE-ORDER" : "ALL PRODUCTS"}</h1>
+        {isPreOrder && <p className="mt-1 text-xs text-muted-foreground uppercase tracking-[0.3em] font-body">Reserve yours now — ships when we go live</p>}
         <p className="mt-2 text-muted-foreground font-body">{allProducts.length} product{allProducts.length !== 1 ? "s" : ""}</p>
       </div>
 
