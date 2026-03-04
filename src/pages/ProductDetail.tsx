@@ -5,11 +5,13 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchProductBySlug, formatPrice } from "@/lib/products";
 import { getProduct, formatPrice as mockFormatPrice } from "@/data/mock-products";
 import { useCart } from "@/context/CartContext";
+import { usePreOrderMode } from "@/hooks/usePreOrderMode";
 import { Check, Loader2, Minus, Plus } from "lucide-react";
 
 export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>();
   const { addItem } = useCart();
+  const isPreOrder = usePreOrderMode();
 
   const { data: dbProduct, isLoading } = useQuery({
     queryKey: ["product", slug],
@@ -78,8 +80,6 @@ export default function ProductDetail() {
   };
 
   const maxQty = selectedVariant ? selectedVariant.stock : 1;
-
-  // Use DB images if available, otherwise fall back to mock product images, then placeholder
   const fallbackImages = mockProduct?.images && mockProduct.images.length > 0 ? mockProduct.images : ["/placeholder.svg"];
   const productImages = product.images && product.images.length > 0 ? product.images : fallbackImages;
 
@@ -115,6 +115,11 @@ export default function ProductDetail() {
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="flex flex-col">
+            {isPreOrder && (
+              <span className="inline-block w-fit border border-border text-muted-foreground px-3 py-1 text-[10px] uppercase tracking-[0.3em] font-body mb-3">
+                Pre-Order
+              </span>
+            )}
             <p className="text-sm text-muted-foreground uppercase tracking-widest font-body mb-1">{product.category}</p>
             <h1 className="font-display text-4xl md:text-5xl mb-4">{product.name}</h1>
             <div className="flex items-center gap-3 mb-6">
@@ -211,8 +216,8 @@ export default function ProductDetail() {
               }`}
             >
               {added ? (
-                <span className="flex items-center justify-center gap-2"><Check className="w-4 h-4" /> Added to Bag</span>
-              ) : !selectedSize ? "Select a Size" : "Add to Bag"}
+                <span className="flex items-center justify-center gap-2"><Check className="w-4 h-4" /> {isPreOrder ? "Added to Pre-Order" : "Added to Bag"}</span>
+              ) : !selectedSize ? "Select a Size" : isPreOrder ? "Pre-Order Now" : "Add to Bag"}
             </button>
 
             {selectedVariant && selectedVariant.stock < 10 && (

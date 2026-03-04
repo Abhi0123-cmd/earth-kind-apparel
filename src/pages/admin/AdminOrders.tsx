@@ -5,10 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { AdminGuard } from "@/hooks/useAdminGuard";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { logActivity } from "@/lib/activity-log";
-import { Loader2, Search, ExternalLink } from "lucide-react";
+import { Loader2, Search, ExternalLink, Settings } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type OrderStatus = Database["public"]["Enums"]["order_status"];
+type ShipmentStatus = Database["public"]["Enums"]["shipment_status"];
 
 const statusColors: Record<OrderStatus, string> = {
   pending: "bg-warning/10 text-warning",
@@ -26,6 +27,7 @@ const statusColors: Record<OrderStatus, string> = {
 
 const allStatuses: OrderStatus[] = ["pending", "confirmed", "paid", "processing", "shipped", "delivered", "cancelled", "refunded", "return_requested", "return_approved", "returned"];
 const statusFlow: OrderStatus[] = ["pending", "confirmed", "paid", "processing", "shipped", "delivered"];
+const allShipmentStatuses: ShipmentStatus[] = ["pending", "picked_up", "in_transit", "out_for_delivery", "delivered", "failed", "returned"];
 
 function AdminOrdersContent() {
   const queryClient = useQueryClient();
@@ -33,15 +35,41 @@ function AdminOrdersContent() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<OrderStatus>("processing");
+  const [preOrderMode, setPreOrderMode] = useState<boolean | null>(null);
+
+  // Fetch pre-order mode
+  useQuery({
+    queryKey: ["site-config", "pre_order_mode"],
+    queryFn: async () => {
+      const { data } = await supabase.from("site_config").select("value").eq("key", "pre_order_mode").single();
+      const val = data?.value === true;
+      setPreOrderMode(val);
+      return val;
+    },
+  });
+
+  const togglePreOrder = useMutation({
+    mutationFn: async (newVal: boolean) => {
+      const { error } = await supabase.from("site_config").update({ value: newVal as any }).eq("key", "pre_order_mode");
+      if (error) throw error;
+      setPreOrderMode(newVal);
+      await logActivity(newVal ? "Pre-order mode enabled" : "Pre-order mode disabled (LIVE)", "config", undefined, {});
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["site-config"] }),
+  });
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ["admin-orders"],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("orders")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(200);
+      const { data } = await supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(200);
+      return data || [];
+    },
+  });
+
+  const { data: shipments } = useQuery({
+    queryKey: ["admin-shipments"],
+    queryFn: async () => {
+      const { data } = await supabase.from("shipments").select("*");
       return data || [];
     },
   });
@@ -53,6 +81,33 @@ function AdminOrdersContent() {
       await logActivity(`Order status changed`, "order", id, { from: oldStatus, to: status });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-orders"] }),
+  });
+
+  const updateShipmentStatus = useMutation({
+    mutationFn: async ({ orderId, status }: { orderId: string; status: ShipmentStatus }) => {
+      const shipment = (shipments || []).find((s) => s.order_id === orderId);
+      if (shipment) {
+        const updates: any = { status };
+        if (status === "delivered") updates.delivered_at = new Date().toISOString();
+        if (status === "picked_up" || status === "in_transit") updates.shipped_at = updates.shipped_at || new Date().toISOString();
+        const { error } = await supabase.from("shipments").update(updates).eq("id", shipment.id);
+        if (error) throw error;
+      } else {
+        // Create shipment if none exists
+        const { error } = await supabase.from("shipments").insert({
+          order_id: orderId,
+          status,
+          shipped_at: ["picked_up", "in_transit", "out_for_delivery", "delivered"].includes(status) ? new Date().toISOString() : null,
+          delivered_at: status === "delivered" ? new Date().toISOString() : null,
+        });
+        if (error) throw error;
+      }
+      await logActivity(`Shipment status changed`, "shipment", orderId, { to: status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-shipments"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+    },
   });
 
   const bulkUpdate = useMutation({
@@ -73,29 +128,23 @@ function AdminOrdersContent() {
     if (statusFilter !== "all" && o.status !== statusFilter) return false;
     if (search) {
       const q = search.toLowerCase();
-      return (
-        o.id.toLowerCase().includes(q) ||
-        (o.shipping_full_name || "").toLowerCase().includes(q) ||
-        (o.email || "").toLowerCase().includes(q)
-      );
+      return o.id.toLowerCase().includes(q) || (o.shipping_full_name || "").toLowerCase().includes(q) || (o.email || "").toLowerCase().includes(q);
     }
     return true;
   });
 
   const toggleSelect = (id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+    setSelected((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
   };
 
   const toggleAll = () => {
-    if (selected.size === filtered.length) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(filtered.map((o) => o.id)));
-    }
+    if (selected.size === filtered.length) setSelected(new Set());
+    else setSelected(new Set(filtered.map((o) => o.id)));
+  };
+
+  const getShipmentStatus = (orderId: string): ShipmentStatus => {
+    const s = (shipments || []).find((s) => s.order_id === orderId);
+    return (s?.status as ShipmentStatus) || "pending";
   };
 
   if (isLoading) {
@@ -104,28 +153,35 @@ function AdminOrdersContent() {
 
   return (
     <div>
-      <h1 className="font-display text-4xl mb-6">ORDERS</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="font-display text-4xl">ORDERS</h1>
+        {preOrderMode !== null && (
+          <button
+            onClick={() => togglePreOrder.mutate(!preOrderMode)}
+            disabled={togglePreOrder.isPending}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-body uppercase tracking-widest border transition-colors ${
+              preOrderMode
+                ? "border-warning bg-warning/10 text-warning"
+                : "border-success bg-success/10 text-success"
+            }`}
+          >
+            <Settings className="w-3.5 h-3.5" />
+            {togglePreOrder.isPending ? "Updating..." : preOrderMode ? "Pre-Order Mode ON" : "LIVE Mode"}
+          </button>
+        )}
+      </div>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-6">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search orders..."
-            className="w-full border border-border bg-background pl-9 pr-3 py-2 text-sm font-body focus:outline-none focus:border-foreground"
-          />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search orders..."
+            className="w-full border border-border bg-background pl-9 pr-3 py-2 text-sm font-body focus:outline-none focus:border-foreground" />
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="border border-border bg-background px-3 py-2 text-sm font-body focus:outline-none"
-        >
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+          className="border border-border bg-background px-3 py-2 text-sm font-body focus:outline-none">
           <option value="all">All statuses</option>
-          {allStatuses.map((s) => (
-            <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
-          ))}
+          {allStatuses.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
         </select>
       </div>
 
@@ -133,26 +189,16 @@ function AdminOrdersContent() {
       {selected.size > 0 && (
         <div className="flex items-center gap-3 mb-4 p-3 border border-border bg-secondary">
           <span className="text-sm font-body font-medium">{selected.size} selected</span>
-          <select
-            value={bulkStatus}
-            onChange={(e) => setBulkStatus(e.target.value as OrderStatus)}
-            className="border border-border bg-background px-2 py-1 text-xs font-body"
-          >
-            {statusFlow.map((s) => (
-              <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
-            ))}
+          <select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value as OrderStatus)}
+            className="border border-border bg-background px-2 py-1 text-xs font-body">
+            {statusFlow.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
             <option value="cancelled">cancelled</option>
           </select>
-          <button
-            onClick={() => bulkUpdate.mutate({ ids: Array.from(selected), status: bulkStatus })}
-            disabled={bulkUpdate.isPending}
-            className="bg-primary text-primary-foreground px-4 py-1.5 text-xs font-body uppercase tracking-widest disabled:opacity-50"
-          >
+          <button onClick={() => bulkUpdate.mutate({ ids: Array.from(selected), status: bulkStatus })} disabled={bulkUpdate.isPending}
+            className="bg-primary text-primary-foreground px-4 py-1.5 text-xs font-body uppercase tracking-widest disabled:opacity-50">
             {bulkUpdate.isPending ? "Updating..." : "Apply"}
           </button>
-          <button onClick={() => setSelected(new Set())} className="text-xs text-muted-foreground font-body hover:text-foreground ml-auto">
-            Clear
-          </button>
+          <button onClick={() => setSelected(new Set())} className="text-xs text-muted-foreground font-body hover:text-foreground ml-auto">Clear</button>
         </div>
       )}
 
@@ -169,7 +215,8 @@ function AdminOrdersContent() {
                 <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Order</th>
                 <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Customer</th>
                 <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Total</th>
-                <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Status</th>
+                <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Order Status</th>
+                <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Delivery</th>
                 <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Date</th>
                 <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Actions</th>
               </tr>
@@ -195,6 +242,15 @@ function AdminOrdersContent() {
                       {order.status.replace(/_/g, " ")}
                     </span>
                   </td>
+                  <td className="py-3 px-2">
+                    <select
+                      value={getShipmentStatus(order.id)}
+                      onChange={(e) => updateShipmentStatus.mutate({ orderId: order.id, status: e.target.value as ShipmentStatus })}
+                      className="border border-border bg-background px-2 py-1 text-xs font-body focus:outline-none"
+                    >
+                      {allShipmentStatuses.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
+                    </select>
+                  </td>
                   <td className="py-3 px-2 text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</td>
                   <td className="py-3 px-2">
                     <select
@@ -202,9 +258,7 @@ function AdminOrdersContent() {
                       onChange={(e) => updateStatus.mutate({ id: order.id, status: e.target.value as OrderStatus, oldStatus: order.status })}
                       className="border border-border bg-background px-2 py-1 text-xs font-body focus:outline-none"
                     >
-                      {statusFlow.map((s) => (
-                        <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
-                      ))}
+                      {statusFlow.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
                       <option value="cancelled">cancelled</option>
                       <option value="refunded">refunded</option>
                     </select>
