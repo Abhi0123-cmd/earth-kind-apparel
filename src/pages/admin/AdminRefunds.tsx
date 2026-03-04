@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGuard } from "@/hooks/useAdminGuard";
 import AdminLayout from "@/components/admin/AdminLayout";
+import { logActivity } from "@/lib/activity-log";
 import { Loader2, Search } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type RefundStatus = Database["public"]["Enums"]["refund_status"];
+type TicketStatus = Database["public"]["Enums"]["ticket_status"];
 
 const refundStatusColors: Record<RefundStatus, string> = {
   pending: "bg-warning/10 text-warning",
@@ -16,15 +18,16 @@ const refundStatusColors: Record<RefundStatus, string> = {
 };
 
 const allRefundStatuses: RefundStatus[] = ["pending", "processing", "completed", "failed"];
+const allTicketStatuses: TicketStatus[] = ["open", "in_progress", "waiting_customer", "resolved", "closed"];
 
 type TabType = "requests" | "processed";
 
 function AdminRefundsContent() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [tab, setTab] = useState<TabType>("requests");
 
-  // Processed refunds from the refunds table
   const { data: refunds, isLoading: refundsLoading } = useQuery({
     queryKey: ["admin-refunds"],
     queryFn: async () => {
@@ -36,7 +39,6 @@ function AdminRefundsContent() {
     },
   });
 
-  // Refund & replacement requests from support tickets
   const { data: refundRequests, isLoading: requestsLoading } = useQuery({
     queryKey: ["admin-refund-requests"],
     queryFn: async () => {
@@ -49,6 +51,28 @@ function AdminRefundsContent() {
     },
   });
 
+  const updateRefundStatus = useMutation({
+    mutationFn: async ({ id, status, oldStatus }: { id: string; status: RefundStatus; oldStatus: string }) => {
+      const { error } = await supabase.from("refunds").update({ status }).eq("id", id);
+      if (error) throw error;
+      if (oldStatus !== status) {
+        await logActivity("Refund status changed", "refund", id, { from: oldStatus, to: status });
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-refunds"] }),
+  });
+
+  const updateTicketStatus = useMutation({
+    mutationFn: async ({ id, status, oldStatus }: { id: string; status: TicketStatus; oldStatus: string }) => {
+      const { error } = await supabase.from("support_tickets").update({ status }).eq("id", id);
+      if (error) throw error;
+      if (oldStatus !== status) {
+        await logActivity("Refund request status changed", "ticket", id, { from: oldStatus, to: status });
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-refund-requests"] }),
+  });
+
   const isLoading = refundsLoading || requestsLoading;
 
   if (isLoading) {
@@ -59,13 +83,7 @@ function AdminRefundsContent() {
     if (statusFilter !== "all" && r.status !== statusFilter) return false;
     if (search) {
       const q = search.toLowerCase();
-      return (
-        r.id.toLowerCase().includes(q) ||
-        r.order_id.toLowerCase().includes(q) ||
-        (r.orders?.shipping_full_name || "").toLowerCase().includes(q) ||
-        (r.orders?.email || "").toLowerCase().includes(q) ||
-        (r.reason || "").toLowerCase().includes(q)
-      );
+      return r.id.toLowerCase().includes(q) || r.order_id.toLowerCase().includes(q) || (r.orders?.shipping_full_name || "").toLowerCase().includes(q) || (r.orders?.email || "").toLowerCase().includes(q) || (r.reason || "").toLowerCase().includes(q);
     }
     return true;
   });
@@ -74,12 +92,7 @@ function AdminRefundsContent() {
     if (statusFilter !== "all" && t.status !== statusFilter) return false;
     if (search) {
       const q = search.toLowerCase();
-      return (
-        t.subject.toLowerCase().includes(q) ||
-        t.id.toLowerCase().includes(q) ||
-        (t.profiles?.full_name || "").toLowerCase().includes(q) ||
-        (t.profiles?.email || "").toLowerCase().includes(q)
-      );
+      return t.subject.toLowerCase().includes(q) || t.id.toLowerCase().includes(q) || (t.profiles?.full_name || "").toLowerCase().includes(q) || (t.profiles?.email || "").toLowerCase().includes(q);
     }
     return true;
   });
@@ -117,23 +130,17 @@ function AdminRefundsContent() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-2 mb-6">
         <button onClick={() => { setTab("requests"); setStatusFilter("all"); }}
-          className={`px-5 py-2.5 text-sm font-body font-medium uppercase tracking-wider border transition-all ${
-            tab === "requests" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
-          }`}>
+          className={`px-5 py-2.5 text-sm font-body font-medium uppercase tracking-wider border transition-all ${tab === "requests" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"}`}>
           Requests ({(refundRequests || []).length})
         </button>
         <button onClick={() => { setTab("processed"); setStatusFilter("all"); }}
-          className={`px-5 py-2.5 text-sm font-body font-medium uppercase tracking-wider border transition-all ${
-            tab === "processed" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
-          }`}>
+          className={`px-5 py-2.5 text-sm font-body font-medium uppercase tracking-wider border transition-all ${tab === "processed" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"}`}>
           Processed ({(refunds || []).length})
         </button>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-6">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -193,9 +200,12 @@ function AdminRefundsContent() {
                         <td className="py-3 px-2 text-muted-foreground max-w-[200px] truncate">{ticket.subject}</td>
                         <td className="py-3 px-2 text-muted-foreground max-w-[200px] truncate">{reason}</td>
                         <td className="py-3 px-2">
-                          <span className={`inline-block px-2 py-1 text-xs uppercase tracking-wider ${ticketStatusColors[ticket.status] || ""}`}>
-                            {ticket.status.replace(/_/g, " ")}
-                          </span>
+                          <select
+                            value={ticket.status}
+                            onChange={(e) => updateTicketStatus.mutate({ id: ticket.id, status: e.target.value as TicketStatus, oldStatus: ticket.status })}
+                            className="border border-border bg-background px-2 py-1 text-xs font-body focus:outline-none">
+                            {allTicketStatuses.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
+                          </select>
                         </td>
                         <td className="py-3 px-2 text-muted-foreground">{new Date(ticket.created_at).toLocaleDateString()}</td>
                       </tr>
@@ -206,7 +216,7 @@ function AdminRefundsContent() {
             </div>
           )}
           <p className="text-xs text-muted-foreground font-body mt-4">
-            {filteredRequests.length} of {(refundRequests || []).length} requests • Manage these in the Support section for full chat view
+            {filteredRequests.length} of {(refundRequests || []).length} requests
           </p>
         </>
       )}
@@ -238,9 +248,12 @@ function AdminRefundsContent() {
                       <td className="py-3 px-2">₹{(refund.amount / 100).toFixed(0)}</td>
                       <td className="py-3 px-2 text-muted-foreground">{refund.reason || "—"}</td>
                       <td className="py-3 px-2">
-                        <span className={`inline-block px-2 py-1 text-xs uppercase tracking-wider ${refundStatusColors[refund.status as RefundStatus]}`}>
-                          {refund.status}
-                        </span>
+                        <select
+                          value={refund.status}
+                          onChange={(e) => updateRefundStatus.mutate({ id: refund.id, status: e.target.value as RefundStatus, oldStatus: refund.status })}
+                          className="border border-border bg-background px-2 py-1 text-xs font-body focus:outline-none">
+                          {allRefundStatuses.map((s) => <option key={s} value={s}>{s}</option>)}
+                        </select>
                       </td>
                       <td className="py-3 px-2 text-muted-foreground">{new Date(refund.created_at).toLocaleDateString()}</td>
                     </tr>

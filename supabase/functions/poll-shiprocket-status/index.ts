@@ -66,8 +66,9 @@ function getEmailTemplateForStatus(status: string): { template: string; subject:
   switch (status) {
     case "picked_up":
     case "in_transit":
-    case "out_for_delivery":
       return { template: "shipping_update", subject: "Your Order Has Been Shipped" };
+    case "out_for_delivery":
+      return { template: "out_for_delivery", subject: "Your Order Is Out for Delivery" };
     case "delivered":
       return { template: "delivery_confirmation", subject: "Your Order Has Been Delivered" };
     default:
