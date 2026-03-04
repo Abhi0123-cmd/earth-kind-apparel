@@ -333,6 +333,16 @@ export default function OrderDetail() {
                     <span className="text-muted-foreground">Status</span>
                     <span className="font-medium uppercase tracking-wider text-xs">{shipment.status.replace(/_/g, " ")}</span>
                   </div>
+                  {shipment.awb_number && (
+                    <a
+                      href={`https://www.shiprocket.in/shipment-tracking/${shipment.awb_number}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-3 inline-flex items-center justify-center w-full bg-primary text-primary-foreground px-4 py-2.5 text-xs font-body uppercase tracking-widest hover:opacity-90 transition-opacity"
+                    >
+                      Track Shipment →
+                    </a>
+                  )}
                   {shipment.shipped_at && (
                     <div className="flex justify-between"><span className="text-muted-foreground">Shipped</span><span>{new Date(shipment.shipped_at).toLocaleDateString("en-IN")}</span></div>
                   )}
