@@ -121,6 +121,7 @@ export default function Policies() {
             <motion.section
               key={section.id}
               id={section.id}
+              style={{ scrollMarginTop: "100px" }}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
