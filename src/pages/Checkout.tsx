@@ -218,7 +218,7 @@ export default function Checkout() {
         {!user && (
           <div className="mb-8 p-4 border border-border bg-secondary">
             <p className="text-sm font-body">
-              <Link to="/auth" className="underline font-medium">Sign in</Link> or create an account to place your order.
+              <Link to="/auth" className="underline font-medium">Sign in</Link> or <Link to="/auth" className="underline font-medium">create an account</Link> to place your order.
             </p>
           </div>
         )}
@@ -234,6 +234,7 @@ export default function Checkout() {
               <div className="space-y-4">
                 <input placeholder="Full name" value={address.full_name} onChange={(e) => handleChange("full_name", e.target.value)} required className={inputClass} />
                 <input placeholder="Phone number" value={address.phone} onChange={(e) => handleChange("phone", e.target.value)} required className={inputClass} />
+                <p className="text-[11px] text-muted-foreground font-body -mt-2">For card or net banking transactions, please use the phone number associated with your bank account.</p>
                 <input placeholder="Address line 1" value={address.address_line_1} onChange={(e) => handleChange("address_line_1", e.target.value)} required className={inputClass} />
                 <input placeholder="Address line 2 (optional)" value={address.address_line_2} onChange={(e) => handleChange("address_line_2", e.target.value)} className={inputClass} />
                 <div className="grid grid-cols-2 gap-4">

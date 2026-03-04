@@ -22,7 +22,20 @@ interface EmailRequest {
   to: string;
   to_name?: string;
   subject: string;
-  template: "order_confirmation" | "shipping_update" | "delivery_confirmation" | "refund_notification" | "return_update" | "invoice";
+  template:
+    | "order_confirmation"
+    | "shipping_update"
+    | "out_for_delivery"
+    | "delivery_confirmation"
+    | "refund_notification"
+    | "return_update"
+    | "return_pickup_scheduled"
+    | "return_picked_up"
+    | "return_received"
+    | "return_completed"
+    | "return_rejected"
+    | "replacement_update"
+    | "invoice";
   data: Record<string, unknown>;
   attachments?: EmailAttachment[];
 }
@@ -43,15 +56,16 @@ function buildHtml(template: string, data: Record<string, unknown>): string {
     <p style="margin-top:16px;color:#aaa">© ${new Date().getFullYear()} Second Chance. All rights reserved.</p>
   </div>`;
 
+  const orderId = data.order_id ? (data.order_id as string).slice(0, 8).toUpperCase() : "";
   let content = "";
 
   switch (template) {
     case "order_confirmation": {
-      const { order_id, total, items_summary } = data;
+      const { total, items_summary } = data;
       const formattedTotal = typeof total === "number" ? `₹${Math.round(total / 100)}` : `₹${total}`;
       content = `
         <h2 style="font-size:18px;letter-spacing:2px">ORDER CONFIRMED</h2>
-        <p>Your order <strong>#${(order_id as string).slice(0, 8).toUpperCase()}</strong> has been placed successfully.</p>
+        <p>Your order <strong>#${orderId}</strong> has been placed successfully.</p>
         ${items_summary ? `<div style="background:#f5f5f5;padding:16px;margin:16px 0">${items_summary}</div>` : ""}
         <p><strong>Total: ${formattedTotal}</strong></p>
         <p>We'll notify you once your order is shipped.</p>
@@ -60,55 +74,127 @@ function buildHtml(template: string, data: Record<string, unknown>): string {
       break;
     }
     case "shipping_update": {
-      const { order_id: oid, tracking_number, carrier } = data;
+      const { tracking_number, carrier } = data;
       content = `
-        <h2 style="font-size:18px;letter-spacing:2px">ORDER SHIPPED</h2>
-        <p>Great news! Your order <strong>#${(oid as string).slice(0, 8).toUpperCase()}</strong> is on its way.</p>
-        ${carrier ? `<p>Carrier: <strong>${carrier}</strong></p>` : ""}
-        ${tracking_number ? `<p>Tracking Number: <strong>${tracking_number}</strong></p>` : ""}
+        <h2 style="font-size:18px;letter-spacing:2px">YOUR ORDER HAS BEEN SHIPPED</h2>
+        <p>Great news! Your order <strong>#${orderId}</strong> is on its way to you.</p>
+        ${carrier ? `<p><strong>Carrier:</strong> ${carrier}</p>` : ""}
+        ${tracking_number ? `<p><strong>Tracking Number:</strong> ${tracking_number}</p>` : ""}
+        <p>You can track your order anytime from your account.</p>
         <a href="${SITE_URL}/orders" ${btnStyle}>TRACK ORDER</a>
         ${spamNote}
       `;
       break;
     }
+    case "out_for_delivery": {
+      content = `
+        <h2 style="font-size:18px;letter-spacing:2px">OUT FOR DELIVERY</h2>
+        <p>Your order <strong>#${orderId}</strong> is out for delivery and will reach you today!</p>
+        <p>Please ensure someone is available to receive the package.</p>
+        <a href="${SITE_URL}/orders" ${btnStyle}>VIEW ORDER</a>
+        ${spamNote}
+      `;
+      break;
+    }
     case "delivery_confirmation": {
-      const { order_id: did } = data;
       content = `
         <h2 style="font-size:18px;letter-spacing:2px">ORDER DELIVERED</h2>
-        <p>Your order <strong>#${(did as string).slice(0, 8).toUpperCase()}</strong> has been delivered.</p>
-        <p>We hope you love your purchase! If you have any concerns, don't hesitate to reach out.</p>
+        <p>Your order <strong>#${orderId}</strong> has been delivered successfully.</p>
+        <p>We hope you love your purchase! If you have any concerns or need to initiate a return, please visit your orders page.</p>
         <a href="${SITE_URL}/orders" ${btnStyle}>VIEW ORDER</a>
         ${spamNote}
       `;
       break;
     }
     case "refund_notification": {
-      const { order_id: rid, amount, reason } = data;
+      const { amount, reason } = data;
       content = `
         <h2 style="font-size:18px;letter-spacing:2px">REFUND PROCESSED</h2>
-        <p>A refund of <strong>₹${amount}</strong> has been initiated for order <strong>#${(rid as string).slice(0, 8).toUpperCase()}</strong>.</p>
-        ${reason ? `<p>Reason: ${reason}</p>` : ""}
-        <p>The amount will be credited to your original payment method within 5-7 business days.</p>
+        <p>A refund of <strong>₹${amount}</strong> has been initiated for order <strong>#${orderId}</strong>.</p>
+        ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ""}
+        <p>The amount will be credited to your original payment method within 5–7 business days.</p>
         ${spamNote}
       `;
       break;
     }
     case "return_update": {
-      const { order_id: retid, status } = data;
+      const { status } = data;
       content = `
         <h2 style="font-size:18px;letter-spacing:2px">RETURN UPDATE</h2>
-        <p>Your return for order <strong>#${(retid as string).slice(0, 8).toUpperCase()}</strong> has been updated.</p>
+        <p>Your return request for order <strong>#${orderId}</strong> has been updated.</p>
         <p>Current status: <strong>${(status as string).replace(/_/g, " ").toUpperCase()}</strong></p>
         <a href="${SITE_URL}/orders" ${btnStyle}>VIEW DETAILS</a>
         ${spamNote}
       `;
       break;
     }
+    case "return_pickup_scheduled": {
+      content = `
+        <h2 style="font-size:18px;letter-spacing:2px">RETURN PICKUP SCHEDULED</h2>
+        <p>A pickup has been scheduled for your return on order <strong>#${orderId}</strong>.</p>
+        <p>Please keep the item packed and ready. Our courier partner will arrive to collect it soon.</p>
+        <a href="${SITE_URL}/orders" ${btnStyle}>VIEW RETURN STATUS</a>
+        ${spamNote}
+      `;
+      break;
+    }
+    case "return_picked_up": {
+      content = `
+        <h2 style="font-size:18px;letter-spacing:2px">RETURN PICKED UP</h2>
+        <p>Your return for order <strong>#${orderId}</strong> has been picked up by our courier partner.</p>
+        <p>We'll inspect the item once it reaches our warehouse and notify you about the next steps.</p>
+        <a href="${SITE_URL}/orders" ${btnStyle}>VIEW RETURN STATUS</a>
+        ${spamNote}
+      `;
+      break;
+    }
+    case "return_received": {
+      content = `
+        <h2 style="font-size:18px;letter-spacing:2px">RETURN RECEIVED</h2>
+        <p>We've received your return for order <strong>#${orderId}</strong> at our warehouse.</p>
+        <p>Our team is inspecting the item. You'll receive an update about your refund or replacement shortly.</p>
+        <a href="${SITE_URL}/orders" ${btnStyle}>VIEW RETURN STATUS</a>
+        ${spamNote}
+      `;
+      break;
+    }
+    case "return_completed": {
+      content = `
+        <h2 style="font-size:18px;letter-spacing:2px">RETURN COMPLETED</h2>
+        <p>Your return for order <strong>#${orderId}</strong> has been successfully completed.</p>
+        <p>If a refund was applicable, it will be processed to your original payment method within 5–7 business days.</p>
+        <a href="${SITE_URL}/orders" ${btnStyle}>VIEW ORDER</a>
+        ${spamNote}
+      `;
+      break;
+    }
+    case "return_rejected": {
+      const { reason: rejReason } = data;
+      content = `
+        <h2 style="font-size:18px;letter-spacing:2px">RETURN REQUEST UPDATE</h2>
+        <p>Unfortunately, your return request for order <strong>#${orderId}</strong> could not be approved.</p>
+        ${rejReason ? `<p><strong>Reason:</strong> ${rejReason}</p>` : ""}
+        <p>If you have questions, please reach out to our support team.</p>
+        <a href="${SITE_URL}/customer-service" ${btnStyle}>CONTACT SUPPORT</a>
+        ${spamNote}
+      `;
+      break;
+    }
+    case "replacement_update": {
+      const { status: repStatus } = data;
+      content = `
+        <h2 style="font-size:18px;letter-spacing:2px">REPLACEMENT UPDATE</h2>
+        <p>Your replacement request for order <strong>#${orderId}</strong> has been updated.</p>
+        <p>Current status: <strong>${(repStatus as string || "").replace(/_/g, " ").toUpperCase()}</strong></p>
+        <a href="${SITE_URL}/orders" ${btnStyle}>VIEW DETAILS</a>
+        ${spamNote}
+      `;
+      break;
+    }
     case "invoice": {
-      const { order_id: iid } = data;
       content = `
         <h2 style="font-size:18px;letter-spacing:2px">YOUR INVOICE</h2>
-        <p>Please find attached the invoice for your order <strong>#${(iid as string).slice(0, 8).toUpperCase()}</strong>.</p>
+        <p>Please find attached the invoice for your order <strong>#${orderId}</strong>.</p>
         <p>If you have any questions about this invoice, feel free to reach out to us.</p>
         <a href="${SITE_URL}/orders" ${btnStyle}>VIEW ORDER</a>
         ${spamNote}

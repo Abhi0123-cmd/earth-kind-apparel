@@ -34,8 +34,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'TOKEN_REFRESHED' && !session) {
-        // Token refresh failed — clear locally (no network)
         clearLocalAuth();
+      }
+      // Intercept password recovery — redirect to reset page instead of auto-login
+      if (event === 'PASSWORD_RECOVERY') {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+        // Use setTimeout to ensure React Router is ready
+        setTimeout(() => {
+          window.location.href = '/reset-password';
+        }, 100);
+        return;
       }
       setSession(session);
       setUser(session?.user ?? null);
