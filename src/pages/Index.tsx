@@ -38,7 +38,7 @@ const Index = () => {
           className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-8 md:px-16 lg:px-24 pt-24 md:pt-28"
         >
           <p className="text-white/20 text-[10px] md:text-xs uppercase tracking-[0.5em] font-body">
-            Est. 2025
+            Est. 2026
           </p>
           <p className="text-white/20 text-[10px] md:text-xs uppercase tracking-[0.5em] font-body">
             {isPreOrder ? "Pre-Order Now" : "Drop 001"}
