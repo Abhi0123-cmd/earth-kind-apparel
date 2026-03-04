@@ -43,7 +43,7 @@ function AdminRefundsContent() {
       const { data } = await supabase
         .from("support_tickets")
         .select("*, profiles:user_id(full_name, email), ticket_messages(message)")
-        .or("subject.ilike.%Refund Request%,subject.ilike.%Replacement Request%")
+        .ilike("subject", "%Refund Request%")
         .order("created_at", { ascending: false });
       return data || [];
     },
@@ -96,7 +96,7 @@ function AdminRefundsContent() {
 
   return (
     <div>
-      <h1 className="font-display text-4xl mb-6">REFUNDS & REPLACEMENTS</h1>
+      <h1 className="font-display text-4xl mb-6">REFUNDS</h1>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="border border-border p-4">

@@ -32,6 +32,8 @@ import AdminReturns from "./pages/admin/AdminReturns";
 import AdminRefunds from "./pages/admin/AdminRefunds";
 import AdminSupport from "./pages/admin/AdminSupport";
 import AdminIntegrations from "./pages/admin/AdminIntegrations";
+import AdminQueries from "./pages/admin/AdminQueries";
+import AdminReplacements from "./pages/admin/AdminReplacements";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -71,6 +73,8 @@ const App = () => (
                 <Route path="/admin/inventory" element={<AdminInventory />} />
                 <Route path="/admin/returns" element={<AdminReturns />} />
                 <Route path="/admin/refunds" element={<AdminRefunds />} />
+                <Route path="/admin/queries" element={<AdminQueries />} />
+                <Route path="/admin/replacements" element={<AdminReplacements />} />
                 <Route path="/admin/support" element={<AdminSupport />} />
                 <Route path="/admin/integrations" element={<AdminIntegrations />} />
                 <Route path="*" element={<NotFound />} />
