@@ -59,8 +59,18 @@ export default function Auth() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
+
+  const validatePassword = (pw: string): string[] => {
+    const errors: string[] = [];
+    if (pw.length < 8) errors.push("At least 8 characters");
+    if (!/[A-Z]/.test(pw)) errors.push("1 uppercase letter");
+    if (!/[0-9]/.test(pw)) errors.push("1 number");
+    if (!/[^A-Za-z0-9]/.test(pw)) errors.push("1 symbol");
+    return errors;
+  };
 
   // No signOut on mount — it triggers a network call that fails if
   // Supabase is briefly unreachable, causing "Unable to reach server".
@@ -72,6 +82,13 @@ export default function Auth() {
     setLoading(true);
 
     if (isSignUp) {
+      const pwErrors = validatePassword(password);
+      if (pwErrors.length > 0) {
+        setPasswordErrors(pwErrors);
+        setLoading(false);
+        return;
+      }
+      setPasswordErrors([]);
       const { error } = await signUp(email, password, fullName);
       if (error) {
         setError(friendlyError(error as AuthError));
@@ -140,9 +157,12 @@ export default function Auth() {
               type={showPassword ? "text" : "password"}
               placeholder="Password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (isSignUp && passwordErrors.length > 0) setPasswordErrors(validatePassword(e.target.value));
+              }}
               required
-              minLength={6}
+              minLength={8}
               className={inputClass}
             />
             <button
@@ -154,6 +174,12 @@ export default function Auth() {
             </button>
           </div>
 
+          {isSignUp && passwordErrors.length > 0 && (
+            <div className="text-destructive text-sm font-body space-y-0.5">
+              <p className="font-medium">Password must include:</p>
+              {passwordErrors.map((e) => <p key={e}>• {e}</p>)}
+            </div>
+          )}
           {error && <p className="text-destructive text-sm font-body">{error}</p>}
           {message && <p className="text-success text-sm font-body">{message}</p>}
 
