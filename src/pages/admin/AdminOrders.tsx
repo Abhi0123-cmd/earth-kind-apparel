@@ -218,7 +218,6 @@ function AdminOrdersContent() {
                 <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Order Status</th>
                 <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Delivery</th>
                 <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Date</th>
-                <th className="text-left py-3 px-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -244,25 +243,14 @@ function AdminOrdersContent() {
                   </td>
                   <td className="py-3 px-2">
                     <select
-                      value={getShipmentStatus(order.id)}
-                      onChange={(e) => updateShipmentStatus.mutate({ orderId: order.id, status: e.target.value as ShipmentStatus })}
-                      className="border border-border bg-background px-2 py-1 text-xs font-body focus:outline-none"
-                    >
-                      {allShipmentStatuses.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
-                    </select>
-                  </td>
-                  <td className="py-3 px-2 text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</td>
-                  <td className="py-3 px-2">
-                    <select
                       value={order.status}
                       onChange={(e) => updateStatus.mutate({ id: order.id, status: e.target.value as OrderStatus, oldStatus: order.status })}
                       className="border border-border bg-background px-2 py-1 text-xs font-body focus:outline-none"
                     >
                       {statusFlow.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
-                      <option value="cancelled">cancelled</option>
-                      <option value="refunded">refunded</option>
                     </select>
                   </td>
+                  <td className="py-3 px-2 text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</td>
                 </tr>
               ))}
             </tbody>
