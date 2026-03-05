@@ -12,6 +12,7 @@ import {
   Plug,
   ArrowLeft,
   LogOut,
+  ClipboardList,
 } from "lucide-react";
 
 const navItems = [
@@ -24,6 +25,7 @@ const navItems = [
   { title: "Replacements", path: "/admin/replacements", icon: RefreshCw },
   { title: "Support", path: "/admin/support", icon: MessageSquare },
   { title: "Integrations", path: "/admin/integrations", icon: Plug },
+  { title: "Pre-Order List", path: "/admin/pre-order-list", icon: ClipboardList },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
