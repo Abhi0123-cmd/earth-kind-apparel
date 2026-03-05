@@ -5,6 +5,7 @@ import { formatPrice } from "@/lib/products";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { usePreOrderMode } from "@/hooks/usePreOrderMode";
 import type { ShippingAddress } from "@/types";
 
 declare global {
@@ -17,6 +18,7 @@ export default function Checkout() {
   const { items, subtotal, clearCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const isPreOrder = usePreOrderMode();
   const shipping = 0;
   const total = subtotal + shipping;
 
@@ -47,12 +49,44 @@ export default function Checkout() {
     setAddress((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handlePreOrderSignup = async () => {
+    if (!user) { navigate("/auth"); return; }
+    setLoading(true);
+    setError("");
+    try {
+      const { error } = await supabase.from("pre_order_signups").insert({
+        user_id: user.id,
+        email,
+        full_name: address.full_name,
+        phone: address.phone,
+        address_line_1: address.address_line_1,
+        address_line_2: address.address_line_2 || null,
+        city: address.city,
+        state: address.state,
+        postal_code: address.postal_code,
+        country: address.country,
+      });
+      if (error) throw new Error(error.message);
+      clearCart();
+      navigate("/waiting-list-confirmation");
+    } catch (err: any) {
+      setError(err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     if (!user) {
       navigate("/auth");
+      return;
+    }
+
+    if (isPreOrder) {
+      await handlePreOrderSignup();
       return;
     }
 
@@ -140,7 +174,6 @@ export default function Checkout() {
           contact: address.phone,
         },
         handler: async (response: any) => {
-          // Verify payment server-side
           try {
             const { data: verifyData, error: verifyError } = await supabase.functions.invoke(
               "verify-razorpay-payment",
@@ -165,7 +198,6 @@ export default function Checkout() {
             navigate("/order-confirmation");
           } catch (err) {
             console.error("Verification error:", err);
-            // Razorpay captured payment, redirect anyway
             clearCart();
             navigate("/order-confirmation");
           }
@@ -255,11 +287,18 @@ export default function Checkout() {
               disabled={loading || !user}
               className="w-full bg-primary text-primary-foreground py-4 text-sm font-medium uppercase tracking-widest hover:opacity-90 transition-opacity font-body disabled:opacity-50"
             >
-              {loading ? "Processing..." : `Pay Now — ${formatPrice(total)}`}
+              {loading ? "Processing..." : isPreOrder ? "Enter Waiting List" : `Pay Now — ${formatPrice(total)}`}
             </button>
-            <p className="text-xs text-muted-foreground font-body text-center">
-              Secure payment powered by Razorpay. Supports UPI, cards, net banking & wallets.
-            </p>
+            {!isPreOrder && (
+              <p className="text-xs text-muted-foreground font-body text-center">
+                Secure payment powered by Razorpay. Supports UPI, cards, net banking & wallets.
+              </p>
+            )}
+            {isPreOrder && (
+              <p className="text-xs text-muted-foreground font-body text-center">
+                You'll be added to our waiting list. We'll notify you when the product is available.
+              </p>
+            )}
           </div>
 
           <div className="lg:col-span-2">

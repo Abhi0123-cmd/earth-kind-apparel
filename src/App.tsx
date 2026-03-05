@@ -34,6 +34,8 @@ import AdminSupport from "./pages/admin/AdminSupport";
 import AdminIntegrations from "./pages/admin/AdminIntegrations";
 import AdminQueries from "./pages/admin/AdminQueries";
 import AdminReplacements from "./pages/admin/AdminReplacements";
+import AdminPreOrderList from "./pages/admin/AdminPreOrderList";
+import WaitingListConfirmation from "./pages/WaitingListConfirmation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +58,7 @@ const App = () => (
                 <Route path="/cart" element={<CartPage />} />
                 <Route path="/checkout" element={<Checkout />} />
                 <Route path="/order-confirmation" element={<OrderConfirmation />} />
+                <Route path="/waiting-list-confirmation" element={<WaitingListConfirmation />} />
                 <Route path="/policies" element={<Policies />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/verify-email" element={<VerifyEmail />} />
@@ -77,6 +80,7 @@ const App = () => (
                 <Route path="/admin/replacements" element={<AdminReplacements />} />
                 <Route path="/admin/support" element={<AdminSupport />} />
                 <Route path="/admin/integrations" element={<AdminIntegrations />} />
+                <Route path="/admin/pre-order-list" element={<AdminPreOrderList />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>
