@@ -35,6 +35,7 @@ import AdminIntegrations from "./pages/admin/AdminIntegrations";
 import AdminQueries from "./pages/admin/AdminQueries";
 import AdminReplacements from "./pages/admin/AdminReplacements";
 import AdminPreOrderList from "./pages/admin/AdminPreOrderList";
+import AdminStories from "./pages/admin/AdminStories";
 import WaitingListConfirmation from "./pages/WaitingListConfirmation";
 import NotFound from "./pages/NotFound";
 
@@ -81,6 +82,7 @@ const App = () => (
                 <Route path="/admin/support" element={<AdminSupport />} />
                 <Route path="/admin/integrations" element={<AdminIntegrations />} />
                 <Route path="/admin/pre-order-list" element={<AdminPreOrderList />} />
+                <Route path="/admin/stories" element={<AdminStories />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>
