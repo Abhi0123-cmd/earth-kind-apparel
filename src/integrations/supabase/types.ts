@@ -44,6 +44,48 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_stories: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          product_id: string
+          story: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          product_id: string
+          story: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          product_id?: string
+          story?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_stories_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_stories_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string

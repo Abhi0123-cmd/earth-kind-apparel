@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   LogOut,
   ClipboardList,
+  BookOpen,
 } from "lucide-react";
 
 const navItems = [
@@ -26,6 +27,7 @@ const navItems = [
   { title: "Support", path: "/admin/support", icon: MessageSquare },
   { title: "Integrations", path: "/admin/integrations", icon: Plug },
   { title: "Pre-Order List", path: "/admin/pre-order-list", icon: ClipboardList },
+  { title: "Stories", path: "/admin/stories", icon: BookOpen },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

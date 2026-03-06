@@ -7,6 +7,8 @@ import { getProduct, formatPrice as mockFormatPrice } from "@/data/mock-products
 import { useCart } from "@/context/CartContext";
 import { usePreOrderMode } from "@/hooks/usePreOrderMode";
 import { Check, Loader2, Minus, Plus } from "lucide-react";
+import StoryInput from "@/components/product/StoryInput";
+import TShirtBackPreview from "@/components/product/TShirtBackPreview";
 
 export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>();
@@ -29,6 +31,8 @@ export default function ProductDetail() {
   const [added, setAdded] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [showMaxStock, setShowMaxStock] = useState(false);
+  const [viewMode, setViewMode] = useState<"front" | "back">("front");
+  const [submittedStory, setSubmittedStory] = useState("");
 
   const colors = useMemo(() => {
     if (!product) return [];
@@ -96,21 +100,47 @@ export default function ProductDetail() {
 
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
-            <div className="aspect-square bg-secondary overflow-hidden mb-4">
-              <img src={productImages[imageIndex]} alt={product.name} className="w-full h-full object-cover" />
+            {/* Front/Back Toggle */}
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => setViewMode("front")}
+                className={`px-4 py-2 text-xs font-body uppercase tracking-widest transition-all border ${
+                  viewMode === "front" ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-foreground"
+                }`}
+              >
+                Front
+              </button>
+              <button
+                onClick={() => setViewMode("back")}
+                className={`px-4 py-2 text-xs font-body uppercase tracking-widest transition-all border ${
+                  viewMode === "back" ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-foreground"
+                }`}
+              >
+                Back
+              </button>
             </div>
-            {productImages.length > 1 && (
-              <div className="flex gap-2">
-                {productImages.map((img, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setImageIndex(i)}
-                    className={`w-20 h-20 bg-secondary overflow-hidden border-2 transition-colors ${i === imageIndex ? "border-foreground" : "border-transparent"}`}
-                  >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
+
+            {viewMode === "front" ? (
+              <>
+                <div className="aspect-square bg-secondary overflow-hidden mb-4">
+                  <img src={productImages[imageIndex]} alt={product.name} className="w-full h-full object-cover" />
+                </div>
+                {productImages.length > 1 && (
+                  <div className="flex gap-2">
+                    {productImages.map((img, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setImageIndex(i)}
+                        className={`w-20 h-20 bg-secondary overflow-hidden border-2 transition-colors ${i === imageIndex ? "border-foreground" : "border-transparent"}`}
+                      >
+                        <img src={img} alt="" className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <TShirtBackPreview story={submittedStory} productName={product.name} />
             )}
           </motion.div>
 
@@ -130,6 +160,7 @@ export default function ProductDetail() {
             </div>
             <p className="text-muted-foreground font-body leading-relaxed mb-8">{product.description}</p>
 
+            {/* Colors */}
             {colors.length > 1 && (
               <div className="mb-6">
                 <p className="text-sm font-medium font-body mb-3">Color — <span className="text-muted-foreground">{selectedColor}</span></p>
@@ -146,13 +177,13 @@ export default function ProductDetail() {
                 </div>
               </div>
             )}
-
             {colors.length === 1 && (
               <div className="mb-6">
                 <p className="text-sm font-medium font-body">Color — <span className="text-muted-foreground">{selectedColor}</span></p>
               </div>
             )}
 
+            {/* Sizes */}
             <div className="mb-6">
               <p className="text-sm font-medium font-body mb-3">Size</p>
               <div className="flex gap-2 flex-wrap">
@@ -175,35 +206,25 @@ export default function ProductDetail() {
               </div>
             </div>
 
+            {/* Quantity */}
             <div className="mb-8">
               <p className="text-sm font-medium font-body mb-3">Quantity</p>
               <div className="flex items-center border border-border w-fit">
-                <button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="px-4 py-3 text-muted-foreground hover:text-foreground transition-colors"
-                  disabled={quantity <= 1}
-                >
+                <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="px-4 py-3 text-muted-foreground hover:text-foreground transition-colors" disabled={quantity <= 1}>
                   <Minus className="w-4 h-4" />
                 </button>
                 <span className="px-6 py-3 font-body text-sm font-medium min-w-[3rem] text-center">{quantity}</span>
                 <button
                   onClick={() => {
-                    if (quantity >= maxQty) {
-                      setShowMaxStock(true);
-                      setTimeout(() => setShowMaxStock(false), 2000);
-                    } else {
-                      setQuantity(quantity + 1);
-                      setShowMaxStock(false);
-                    }
+                    if (quantity >= maxQty) { setShowMaxStock(true); setTimeout(() => setShowMaxStock(false), 2000); }
+                    else { setQuantity(quantity + 1); setShowMaxStock(false); }
                   }}
                   className="px-4 py-3 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
-              {showMaxStock && (
-                <p className="text-xs text-destructive font-body mt-1 animate-in fade-in">Max stock reached</p>
-              )}
+              {showMaxStock && <p className="text-xs text-destructive font-body mt-1 animate-in fade-in">Max stock reached</p>}
             </div>
 
             <button
@@ -211,7 +232,7 @@ export default function ProductDetail() {
               disabled={!selectedVariant}
               className={`w-full py-4 text-sm font-medium uppercase tracking-widest font-body transition-all ${
                 !selectedVariant ? "bg-muted text-muted-foreground cursor-not-allowed"
-                  : added ? "bg-success text-success-foreground"
+                  : added ? "bg-green-700 text-white"
                   : "bg-primary text-primary-foreground hover:opacity-90"
               }`}
             >
@@ -224,6 +245,11 @@ export default function ProductDetail() {
               <p className="mt-3 text-sm text-destructive font-body">Only {selectedVariant.stock} left in stock</p>
             )}
           </motion.div>
+        </div>
+
+        {/* Story Section */}
+        <div className="max-w-7xl mx-auto mt-16">
+          <StoryInput productId={product.id} onStorySubmit={(story) => { setSubmittedStory(story); setViewMode("back"); }} />
         </div>
       </div>
     </div>
