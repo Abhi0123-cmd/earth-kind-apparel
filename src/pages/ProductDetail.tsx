@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchProductBySlug, formatPrice } from "@/lib/products";
 import { getProduct, formatPrice as mockFormatPrice } from "@/data/mock-products";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import { usePreOrderMode } from "@/hooks/usePreOrderMode";
 import { Check, Loader2, Minus, Plus } from "lucide-react";
 import StoryInput from "@/components/product/StoryInput";
