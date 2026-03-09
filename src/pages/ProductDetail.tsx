@@ -14,6 +14,7 @@ import TShirtBackPreview from "@/components/product/TShirtBackPreview";
 export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>();
   const { addItem } = useCart();
+  const { user } = useAuth();
   const isPreOrder = usePreOrderMode();
 
   const { data: dbProduct, isLoading } = useQuery({
