@@ -295,9 +295,14 @@ export default function Checkout() {
               </p>
             )}
             {isPreOrder && (
-              <p className="text-xs text-muted-foreground font-body text-center">
-                You'll be added to our waiting list. We'll notify you when the product is available.
-              </p>
+              <div className="text-center space-y-2">
+                <p className="text-xs text-muted-foreground font-body">
+                  You'll be added to our waiting list. We'll notify you when the product is available.
+                </p>
+                <p className="text-xs text-muted-foreground font-body">
+                  Pre-orders are shipped via Cash on Delivery (COD). Payment will be collected at the time of delivery.
+                </p>
+              </div>
             )}
           </div>
 

@@ -38,7 +38,7 @@ function friendlyError(err: AuthError): string {
 
   // Weak password
   if (msg.includes("password") && (msg.includes("weak") || msg.includes("short") || msg.includes("at least"))) {
-    return "Password is too weak. Use at least 6 characters.";
+    return "Password is too weak. Use at least 8 characters with 1 uppercase letter, 1 number, and 1 symbol.";
   }
 
   // Network / fetch failures
