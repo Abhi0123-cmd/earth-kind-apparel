@@ -77,8 +77,11 @@ export default function ProductDetail() {
 
   const selectedVariant = product.variants.find((v) => v.color === selectedColor && v.size === selectedSize);
 
+  const navigate = useNavigate();
+
   const handleAddToCart = () => {
     if (!selectedVariant) return;
+    if (isPreOrder && !user) { navigate("/auth"); return; }
     addItem(product, selectedVariant, quantity);
     setAdded(true);
     setQuantity(1);
