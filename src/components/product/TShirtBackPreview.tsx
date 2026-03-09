@@ -12,8 +12,8 @@ export default function TShirtBackPreview({ story, productName = "SECOND CHANCE"
 
       {/* Text overlay positioned on the back of the shirt */}
       {story && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="text-center px-[20%] max-h-[65%] overflow-hidden flex flex-col items-center justify-center">
+        <div className="absolute inset-0 flex items-start justify-center pointer-events-none pt-[15%]">
+          <div className="text-center px-[20%] max-h-[45%] overflow-hidden flex flex-col items-center justify-start">
             <h2
               className="font-display text-base md:text-lg lg:text-xl mb-2 tracking-wide"
               style={{ color: "#bf333b" }}
