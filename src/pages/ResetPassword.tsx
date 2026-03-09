@@ -1,29 +1,29 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
 export default function ResetPassword() {
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Supabase v2 puts recovery tokens in the URL hash or as query params
-    const hash = window.location.hash;
-    const params = new URLSearchParams(window.location.search);
-    const hasRecovery = hash.includes("type=recovery") || params.get("type") === "recovery";
-    if (!hasRecovery && !hash.includes("access_token")) {
-      // No recovery token found — but don't redirect immediately, 
-      // Supabase may still be processing the token exchange
-    }
-  }, [navigate]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
 
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
+    setLoading(true);
     const { error } = await supabase.auth.updateUser({ password });
     if (error) {
       setError(error.message);
@@ -43,7 +43,8 @@ export default function ResetPassword() {
         <p className="text-muted-foreground font-body text-sm mb-8">Enter your new password below.</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input type="password" placeholder="New password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className={inputClass} />
+          <input type="password" placeholder="New password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} className={inputClass} />
+          <input type="password" placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={8} className={inputClass} />
           {error && <p className="text-destructive text-sm font-body">{error}</p>}
           <button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground py-4 text-sm font-medium uppercase tracking-widest font-body disabled:opacity-50">
             {loading ? "..." : "Update Password"}
