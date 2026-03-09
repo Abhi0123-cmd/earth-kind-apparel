@@ -35,6 +35,7 @@ export default function ProductDetail() {
   const [showMaxStock, setShowMaxStock] = useState(false);
   const [viewMode, setViewMode] = useState<"front" | "back">("front");
   const [submittedStory, setSubmittedStory] = useState("");
+  const navigate = useNavigate();
 
   const colors = useMemo(() => {
     if (!product) return [];
