@@ -35,6 +35,7 @@ export default function ProductDetail() {
   const [showMaxStock, setShowMaxStock] = useState(false);
   const [viewMode, setViewMode] = useState<"front" | "back">("front");
   const [submittedStory, setSubmittedStory] = useState("");
+  const navigate = useNavigate();
 
   const colors = useMemo(() => {
     if (!product) return [];
@@ -77,7 +78,6 @@ export default function ProductDetail() {
 
   const selectedVariant = product.variants.find((v) => v.color === selectedColor && v.size === selectedSize);
 
-  const navigate = useNavigate();
 
   const handleAddToCart = () => {
     if (!selectedVariant) return;
