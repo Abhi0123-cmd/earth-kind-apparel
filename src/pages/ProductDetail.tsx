@@ -252,19 +252,6 @@ export default function ProductDetail() {
           </motion.div>
         </div>
 
-        {/* Story Section - requires sign-in */}
-        <div className="max-w-7xl mx-auto mt-16">
-          {user ? (
-            <StoryInput productId={product.id} onStorySubmit={(story) => { setSubmittedStory(story); setViewMode("back"); }} />
-          ) : (
-            <div className="border border-border p-6 text-center">
-              <h3 className="font-display text-xl mb-2">YOUR SECOND CHANCE STORY</h3>
-              <p className="text-sm text-muted-foreground font-body mb-4">
-                <Link to="/auth" className="underline font-medium">Sign in</Link> to share your story and see it on the back of your tee.
-              </p>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

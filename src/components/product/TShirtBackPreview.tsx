@@ -7,7 +7,7 @@ interface TShirtBackPreviewProps {
 
 export default function TShirtBackPreview({ story, productName = "SECOND CHANCE" }: TShirtBackPreviewProps) {
   return (
-    <div className="aspect-square bg-black overflow-hidden relative">
+    <div className="aspect-square bg-black overflow-hidden relative" style={{ backgroundColor: "#000000" }}>
       <img src={tshirtBack} alt="T-shirt back view" className="w-full h-full object-cover" />
 
       {/* Text overlay positioned on the back of the shirt */}
@@ -35,7 +35,6 @@ export default function TShirtBackPreview({ story, productName = "SECOND CHANCE"
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="text-center bg-background/60 backdrop-blur-sm px-4 py-2 rounded">
             <p className="text-muted-foreground font-body text-xs">Back View</p>
-            <p className="text-muted-foreground/60 font-body text-[10px] mt-0.5">Submit a story to see it here</p>
           </div>
         </div>
       )}
