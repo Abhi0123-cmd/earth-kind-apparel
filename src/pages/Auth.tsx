@@ -23,7 +23,7 @@ function friendlyError(err: AuthError): string {
 
   // Email not confirmed
   if (msg.includes("email not confirmed")) {
-    return "Your email hasn't been verified yet. Please check your inbox.";
+    return "Your email has not been verified yet. Please verify your email and try signing in.";
   }
 
   // User not found
