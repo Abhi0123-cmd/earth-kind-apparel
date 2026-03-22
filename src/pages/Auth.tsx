@@ -18,17 +18,17 @@ function friendlyError(err: AuthError): string {
 
   // Invalid credentials
   if (msg.includes("invalid login credentials") || msg.includes("invalid_credentials")) {
-    return "Incorrect email or password.";
+    return "This account doesn't exist or the password is incorrect. Please check your credentials or create a new account.";
   }
 
   // Email not confirmed
   if (msg.includes("email not confirmed")) {
-    return "Your email hasn't been verified yet. Please check your inbox.";
+    return "Your email has not been verified yet. Please verify your email and try signing in.";
   }
 
   // User not found
   if (msg.includes("user not found")) {
-    return "No account found with this email.";
+    return "This account doesn't exist. Please create a new account.";
   }
 
   // Signup: user already exists
