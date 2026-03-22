@@ -89,9 +89,11 @@ export default function Auth() {
         return;
       }
       setPasswordErrors([]);
-      const { error } = await signUp(email, password, fullName);
+      const { error, alreadyExists } = await signUp(email, password, fullName);
       if (error) {
         setError(friendlyError(error as AuthError));
+      } else if (alreadyExists) {
+        setError(`An account already exists under ${email}. Please sign in instead.`);
       } else {
         navigate("/verify-email", { state: { email } });
       }
