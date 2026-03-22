@@ -18,7 +18,7 @@ function friendlyError(err: AuthError): string {
 
   // Invalid credentials
   if (msg.includes("invalid login credentials") || msg.includes("invalid_credentials")) {
-    return "Incorrect email or password.";
+    return "This account doesn't exist or the password is incorrect. Please check your credentials or create a new account.";
   }
 
   // Email not confirmed
