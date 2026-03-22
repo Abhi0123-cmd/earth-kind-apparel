@@ -28,7 +28,7 @@ function friendlyError(err: AuthError): string {
 
   // User not found
   if (msg.includes("user not found")) {
-    return "No account found with this email.";
+    return "This account doesn't exist. Please create a new account.";
   }
 
   // Signup: user already exists
