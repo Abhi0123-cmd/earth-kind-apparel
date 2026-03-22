@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -79,7 +79,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         emailRedirectTo: `${getPublicAppUrl()}/auth`,
       },
     });
-    return { error: error as Error | null };
+    // Supabase returns success with empty identities when email already exists
+    const alreadyExists = !error && data?.user?.identities?.length === 0;
+    return { error: error as Error | null, alreadyExists };
   };
 
   const signIn = async (email: string, password: string) => {
