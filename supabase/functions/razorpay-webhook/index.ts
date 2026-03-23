@@ -186,6 +186,22 @@ Deno.serve(async (req) => {
           );
         }
 
+        // Notify admin about new order
+        const adminItemsSummary = orderItems
+          ? orderItems.map((i) => `${i.quantity}× ${i.product_name} (${i.variant_label})`).join(", ")
+          : "";
+        await sendEmail(
+          "order_confirmation",
+          "secondchancestorre@gmail.com",
+          "Second Chance Admin",
+          `🛒 New Order Received — #${(order?.id || payment.order_id).slice(0, 8).toUpperCase()}`,
+          {
+            order_id: order?.id || payment.order_id,
+            total: order?.total || 0,
+            items_summary: `<p><strong>Customer:</strong> ${order?.shipping_full_name || "N/A"} (${order?.email || "N/A"})</p>${orderItems ? orderItems.map((i) => `<p>${i.quantity}× ${i.product_name} (${i.variant_label})</p>`).join("") : ""}`,
+          }
+        );
+
         // Auto-trigger Shiprocket order creation
         try {
           const shiprocketRes = await fetch(
