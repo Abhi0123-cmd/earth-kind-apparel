@@ -79,8 +79,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         emailRedirectTo: `${getPublicAppUrl()}/auth`,
       },
     });
-    // Supabase returns success with empty identities when email already exists
-    const alreadyExists = !error && data?.user?.identities?.length === 0;
+    // Detect existing accounts: empty identities OR created_at is old (Supabase
+    // returns a fake success with the existing user's timestamp to prevent enumeration)
+    const alreadyExists =
+      !error &&
+      (data?.user?.identities?.length === 0 ||
+        (data?.user?.created_at &&
+          Date.now() - new Date(data.user.created_at).getTime() > 5000));
     return { error: error as Error | null, alreadyExists };
   };
 
